@@ -1,6 +1,5 @@
-# WATCH Automated Steps
-# Created - 10/06/2024
-# Modified - 10/08/2024
+# WATCH: A Distributed Clock Time Offset Estimation Tool for Software-Defined Radio Platforms
+# Last Modified - 11/19/2024
 # Author - Cassie Jeng
 
 # Import packages
