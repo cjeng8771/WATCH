@@ -21,16 +21,13 @@ To run through the full experiment including data collection and WATCH:
 4. Resource Reservation with the [Platform for Open Wireless Data-driven Experimental Research (POWDER)](https://powderwireless.net/) and Initializing Node Sessions
     * Follow all instructions printed to STDOUT.
     * **Note:** List View refers to the second tab in the table at the bottom of the screen when viewing the active ready experiment.
-5. Defining Experiment Nodes
-    * Once all nodes are ready again, copy the `[username]@[orch-node-name]` from the **SSH command** column and **orch** row in the table.
-    * Record the node numbers for all the non-orch nodes. These are part of the node-name in the **SSH command** column for each node. Enter these when prompted.
-    * Record the node names for all the non-orch nodes. These are part of the node ID in the **ID** column for each node. Enter these, in all lowercase and abbreviated the same way they are in the column, when prompted.
+5. Once all nodes are ready again, copy each listed `[username]@[node-name]` from the **SSH command** column in the table, and enter them, separated by a space, when prompted.
 6. Configuring Nodes for Transmission
     * Follow all instructions printed to STDOUT that describe how to set up the node SSH sessions for the experiment. After continuing, the script will secure copy the IQ file previously created to all nodes and check that the `meascli.py` script on each node is enabling the use of the external clock.
     * When prompted about modifications to the experiment JSON file, hit enter to keep the default parameter or type the desired modification in the same format as the default is shown. 
     * **Note:** Make sure to choose a txfreq/rxfreq in the experiment's reserved range.
     * **Note:** Choose rxrepeat based on how many transmission iterations are desired for each link.
-    * Record the full ID listed in the **ID** column of the experiment table for all comp nodes. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to all comp nodes for the experiment.
+    * Record the full ID listed in the **ID** column of the experiment table for every node, other than the orch, with a valid ssh command. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to all nodes for the experiment.
 7. Running the Experiment
     * Follow all instructions printed to STDOUT. These will walk through testing preparation for the experiment and starting data collection with Shout. 
     * **Note:** The Shout measurement framework is used to automate TX and RX functions across multiple nodes in the POWDER network. 

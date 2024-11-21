@@ -1,5 +1,5 @@
 # WATCH: A Distributed Clock Time Offset Estimation Tool for Software-Defined Radio Platforms
-# Last Modified - 11/19/2024
+# Last Modified - 11/20/2024
 # Author - Cassie Jeng
 
 # Import packages
@@ -32,12 +32,6 @@ from matplotlib import rc
 import datetime
 rc('xtick',labelsize=14)
 rc('ytick',labelsize=14)
-
-# Create argument parser
-# argparser = argparse.ArgumentParser(description='Automated WATCH time synchronization')
-# argparser.add_argument('-d','--data',default='r',help='Input option for IQ generation. p for plain text with preamble, r for pn codes with no preamble.')
-# argparser.add_argument('-D','--debug',default='n',help='Optional debug prints to show intermediate steps, y/n.')
-# args = argparser.parse_args()
 
 # Establish DEBUG capabilities
 DEBUG_D = input('\nDEBUG to show intermediate steps? [y/n]:')
@@ -190,16 +184,10 @@ def file_trans(filename, nodes, scp_filename, directory):
 	command = 'chmod +x ' + filename
 	command_arr = command.split(' ')
 	result = subprocess.run(command_arr, capture_output=True, text=True)
-	#print('\n')
-	#print(result.stdout)
-	#print('\n')
 
 	command = './' + filename
 	command_arr = command.split(' ')
 	result = subprocess.run(command_arr, capture_output=True, text=True)
-	#print('\n')
-	#print(result.stdout)
-	#print('\n')
 
 	print(scp_filename + ' transfered to all nodes!')
 
@@ -776,45 +764,14 @@ if prog_section == '1':
 	nodes = ssh_command.split(' ')
 	user_arr = nodes[0].split('@')
 	username = str(user_arr[0])
-	#ending = str(user_arr[1])
 	if DEBUG:
 		print('\nusername: ' + username)
-		#print('ending: ' + ending)
-	"""
-	temp = 0
-	start = 0
-	end = 0
-	isnum = False
-	for k in ending:
-		if k.isnumeric() and isnum == False:
-			start = temp
-			isnum = True
-		elif k.isnumeric() == False and isnum == True:
-			end = temp
-			isnum = False
-		temp += 1
-	part1 = str(ending[:start]) # pc
-	part2 = str(ending[end:]) # -fort.emulab.net
-	orch = str(ending[start:end]) # 12
-
-	if DEBUG:
-		print('\npart 1: ' + part1)
-		print('orch: ' + orch)
-		print('part 2: ' + part2)
-	
-	nums_string = input('Enter pc numbers for all nodes in experiment other than orch, separated by space (ie 15 09 05): ')
-	nums_arr = nums_string.split(' ')
-	if DEBUG:
-		print(nums_arr)
-	"""
 
 	ft_filename = 'filetransfer.sh'
 	ft_directory = '/local/repository/shout/signal_library'
 
 	##### Set up Sessions for Nodes #####
 	print('\n##### Setting up Sessions for Experiment! #####')
-	#node_list = input('List nodes reserved through POWDER experiment, lowercase and as abbreviated by experiment, separated by a space, and in the same order as previously listed node numbers [bes browning meb]: ')
-	#node_arr = node_list.split(' ')
 
 	num_sessions = len(nodes) + 1
 	print('\nOpen ' + Fore.RED + str(num_sessions) + Style.RESET_ALL + ' new Terminal windows. Two for the orchestrator and one for each experiment node.')
@@ -844,9 +801,6 @@ if prog_section == '1':
 	command = 'scp ' + nodes[0] + ':/local/repository/shout/meascli.py .'
 	command_arr = command.split(' ')
 	scp_result = subprocess.run(command_arr, capture_output=True, text=True)
-	#print('\n')
-	#print(scp_result.stdout)
-	#print('\n')
 
 	## Editing external clock line
 	ms_filename = 'meascli.py'
@@ -871,9 +825,6 @@ if prog_section == '1':
 	command = 'scp ' + nodes[0] + ':/local/repository/bin/3.run_cmd.sh .'
 	command_arr = command.split(' ')
 	cmd_result = subprocess.run(command_arr, capture_output=True, text=True)
-	#print('\n')
-	#print(cmd_result.stdout)
-	#print('\n')
 
 	cmd_filename = '3.run_cmd.sh'
 	linenum, found_line = find_line(cmd_filename,'save_iq_w_tx_file')
@@ -895,9 +846,6 @@ if prog_section == '1':
 	command = 'scp ' + nodes[0] + ':' + json_directory + '/' + json_filename + ' .'
 	command_arr = command.split(' ')
 	json_result = subprocess.run(command_arr, capture_output=True, text=True)
-	#print('\n')
-	#print(json_result.stdout)
-	#print('\n')
 
 	## Which lines would you like to modify in the JSON file?
 	print(Fore.RED + '\nThe following are in reference to the TX JSON file. For each, if you would like to keep the default, press enter. If you would like to change the default, type the new value you would like in the same format as the given default.\n' + Style.RESET_ALL)
@@ -1032,9 +980,7 @@ if prog_section == '1':
 	command = 'scp -r ' + nodes[0] + ':/local/data/' + shout_folder_options + ' .'
 	command_arr = command.split(' ')
 	folder_result = subprocess.run(command_arr, capture_output=True, text=True)
-	#print('\n')
-	#print(folder_result.stdout)
-	#print('\n')
+	
 	print('If no folders/files were transferred from remote host, run ' + Fore.RED + 'ls /local/data/' + Style.RESET_ALL + ' on orch node and check if there is a folder entitled \'Shout_meas_MM-DD-YYYY_HH-MM-SS\' where MM-DD-YYYY is the date of collection and HH-MM-SS is the time of collection. If this folder does exist, manually run the following command, updating the necessary fields, to scp the data to your local host. The folder should have three files: log, measurements.hdf5, and save_iq_w_tx_file.json: \n' + Fore.RED + 'scp -r <username>@<orch_node_hostname>:/local/data/Shout_meas_MM-DD-YYYY_HH-MM-SS .' + Style.RESET_ALL)
 	
 	pre = [filename for filename in os.listdir('.') if filename.startswith(shout_folder_options[:-1])]
@@ -1063,16 +1009,12 @@ print('Over-the-air Narrowband QPSK Modulation and Demodulation: from MMW 2023')
 print('Authors: Cassie Jeng, Neal Patwari, Aarti Singh, Jie Wang, Meles Gebreyesus Weldegebriel\n')
 
 # Loading Data
-# folder = input('Input name of folder where Shout results were saved. Format should match Shout_meas_MM-DD-YYYY_HH-MM-SS: ')
 IQ_filename = fn # name used in IQ generation for file
 print('Loading data from ' + folder[11:21] + ' data collection.\n')
 
 jsonfile = 'save_iq_w_tx_file.json'
 rxrepeat, samp_rate, txlocs, rxlocs = JsonLoad(folder, jsonfile)
-
 rx_data, _, txrxloc = traverse_dataset(folder)
-#samp_rate = input('Experiment sample rate? [250000.0]: ')
-#samp_rate = float(samp_rate)
 
 # setting up the links
 rx_names = []
