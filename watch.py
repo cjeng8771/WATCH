@@ -170,10 +170,10 @@ def get_samps_from_file(filename):
 	return samps
 
 # POWDER Experiment Set Up functions
-def file_trans(filename, ssh_command, nums_arr, username, part1, part2, scp_filename, directory):
-	line1 = 'for HOST in ' + ssh_command
-	for n in nums_arr:
-		line1 = line1 + ' ' + username + '@' + part1 + str(n) + part2
+def file_trans(filename, nodes, scp_filename, directory):
+	line1 = 'for HOST in'
+	for n in nodes:
+		line1 = line1 + ' ' + n
 	line2 = 'do'
 	line3 = '    scp ' + scp_filename + ' $HOST:' + directory
 	line4 = 'done'
@@ -190,16 +190,16 @@ def file_trans(filename, ssh_command, nums_arr, username, part1, part2, scp_file
 	command = 'chmod +x ' + filename
 	command_arr = command.split(' ')
 	result = subprocess.run(command_arr, capture_output=True, text=True)
-	print('\n')
-	print(result.stdout)
-	print('\n')
+	#print('\n')
+	#print(result.stdout)
+	#print('\n')
 
 	command = './' + filename
 	command_arr = command.split(' ')
 	result = subprocess.run(command_arr, capture_output=True, text=True)
-	print('\n')
-	print(result.stdout)
-	print('\n')
+	#print('\n')
+	#print(result.stdout)
+	#print('\n')
 
 	print(scp_filename + ' transfered to all nodes!')
 
@@ -559,8 +559,7 @@ if prog_section == '1':
 	data_d = input('\nInput option for IQ generation. p for plain text with preamble, r for pn codes with no preamble:')
 
 	# IQ Generation for Plain Text Data & PN Code Data
-	print('\nSTEP 1')
-	print('IQ Generation: Create IQ File for Message to Transmit\n')
+	print('\nSTEP 1: IQ Generation: Create IQ File for Message to Transmit\n')
 	if data_d == 'p':
 		print('Generating IQ file for Plain Text Data with Preamble')
 		print('Program derived from Over-the-air Narrowband QPSK Modulation and Demodulation Tutorial, MWW 2023')
@@ -757,11 +756,8 @@ if prog_section == '1':
 	if step2 != 'y':
 		exit()
 
-	print('Continuing program....')
-	print('\nSTEP 2')
-
-	print('Reserve Resources & Instantiate an Experiment using POWDER')
-	print('\n\n ----- Navigate to https://powderwireless.net/ ----- ')
+	print('STEP 2: Reserve Resources & Instantiate an Experiment using POWDER')
+	print('\n ----- Navigate to https://powderwireless.net/ ----- ')
 	print('1. Login\n2. Create a resource reservation with desired nodes\n3. Start an experiment using the shout-long-measurement profile or create a new profile via Experiments -> Create Experiment Profile -> Git Repo -> add repo link (https://gitlab.flux.utah.edu/frost/proj-radio-meas) -> select the profile')
 	print('Note: Make sure to check \"Start X11 VNC on all compute nodes\". You may need to schedule an experiment for a later time based on resource availability.\n')
 	
@@ -771,22 +767,20 @@ if prog_section == '1':
 	if step3 != 'y':
 		exit()
 
-	print('Continuing program....')
-	print('\nSTEP 3')
-
-	print('Set up POWDER Experiment: All Node and Orchestrator Sessions')
-	print('\n\n ----- Open the created POWDER experiment ----- ')
+	print('STEP 3: Set up POWDER Experiment: All Node and Orchestrator Sessions')
+	print('\n ----- Open the created POWDER experiment ----- ')
 	print('1. Navigate to List View for the experiment nodes.\n2. Click the check box next to the gear symbol in the header of the experiment node list. Click the gear symbol drop down menu and reboot all nodes. Wait until all nodes are ready again.')
 
 	##### Creating filetransfer.sh #####
-	ssh_command = input('SSH command for orch [username@orch-node-name]: ')
-	user_arr = ssh_command.split('@')
+	ssh_command = input('List each full [username]@[node-name] from the SSH command column for orch and all comp nodes, starting with orch, separated by a space: ')
+	nodes = ssh_command.split(' ')
+	user_arr = nodes[0].split('@')
 	username = str(user_arr[0])
-	ending = str(user_arr[1])
+	#ending = str(user_arr[1])
 	if DEBUG:
 		print('\nusername: ' + username)
-		print('ending: ' + ending)
-
+		#print('ending: ' + ending)
+	"""
 	temp = 0
 	start = 0
 	end = 0
@@ -807,30 +801,31 @@ if prog_section == '1':
 		print('\npart 1: ' + part1)
 		print('orch: ' + orch)
 		print('part 2: ' + part2)
-
+	
 	nums_string = input('Enter pc numbers for all nodes in experiment other than orch, separated by space (ie 15 09 05): ')
 	nums_arr = nums_string.split(' ')
 	if DEBUG:
 		print(nums_arr)
+	"""
 
 	ft_filename = 'filetransfer.sh'
 	ft_directory = '/local/repository/shout/signal_library'
 
 	##### Set up Sessions for Nodes #####
 	print('\n##### Setting up Sessions for Experiment! #####')
-	node_list = input('List nodes reserved through POWDER experiment, lowercase and as abbreviated by experiment, separated by a space, and in the same order as previously listed node numbers [bes browning meb]: ')
-	node_arr = node_list.split(' ')
+	#node_list = input('List nodes reserved through POWDER experiment, lowercase and as abbreviated by experiment, separated by a space, and in the same order as previously listed node numbers [bes browning meb]: ')
+	#node_arr = node_list.split(' ')
 
-	num_sessions = len(node_arr) + 2
+	num_sessions = len(nodes) + 1
 	print('\nOpen ' + Fore.RED + str(num_sessions) + Style.RESET_ALL + ' new Terminal windows. Two for the orchestrator and one for each experiment node.')
 	print('In the first orch terminal window, run the following command to start ssh and tmux sessions:\n')
-	print(Fore.RED + 'ssh -Y -p 22 -t ' + username + '@' + part1 + orch + part2 + ' \'cd /local/repository/bin && tmux new-session -A -s shout1 &&  exec $SHELL\'\n' + Style.RESET_ALL)
+	print(Fore.RED + 'ssh -Y -p 22 -t ' + nodes[0] + ' \'cd /local/repository/bin && tmux new-session -A -s shout1 &&  exec $SHELL\'\n' + Style.RESET_ALL)
 	print('In the second orch terminal window, run the following command:\n')
-	print(Fore.RED + 'ssh -Y -p 22 -t ' + username + '@' + part1 + orch + part2 + ' \'cd /local/repository/bin && tmux new-session -A -s shout2 &&  exec $SHELL\'\n' + Style.RESET_ALL)
+	print(Fore.RED + 'ssh -Y -p 22 -t ' + nodes[0] + ' \'cd /local/repository/bin && tmux new-session -A -s shout2 &&  exec $SHELL\'\n' + Style.RESET_ALL)
 
-	print('Run the following ' + str(len(node_arr)) + ' commands in the terminal windows opened for each experiment node.\n')
-	for n in nums_arr:
-		print(Fore.RED + 'ssh -Y -p 22 -t ' + username + '@' + part1 + n + part2 + ' \'cd /local/repository/bin && tmux new-session -A -s shout &&  exec $SHELL\'' + Style.RESET_ALL)
+	print('Run the following ' + str(len(nodes) - 1) + ' commands in the terminal windows opened for each experiment node.\n')
+	for n in range(1,len(nodes)):
+		print(Fore.RED + 'ssh -Y -p 22 -t ' + nodes[n] + ' \'cd /local/repository/bin && tmux new-session -A -s shout &&  exec $SHELL\'' + Style.RESET_ALL)
 
 	print('\nSessions initialized!')
 
@@ -840,21 +835,18 @@ if prog_section == '1':
 	if step4 != 'y':
 		exit()
 
-	print('Continuing program....')
-	print('\nSTEP 4')
-
-	print('Set up Nodes for Experiment: IQ file, meascli.py, 3.run_cmd.sh, save_iq_w_tx_file.json')
+	print('STEP 4: Set up Nodes for Experiment: IQ file, meascli.py, 3.run_cmd.sh, save_iq_w_tx_file.json')
 
 	## Transferring IQ file to all nodes
-	file_trans(ft_filename,ssh_command,nums_arr,username,part1,part2,fn,ft_directory)
+	file_trans(ft_filename,nodes,fn,ft_directory)
 
 	## Getting meascli.py from node
-	command = 'scp ' + username + '@' + part1 + nums_arr[0] + part2 + ':/local/repository/shout/meascli.py .'
+	command = 'scp ' + nodes[0] + ':/local/repository/shout/meascli.py .'
 	command_arr = command.split(' ')
 	scp_result = subprocess.run(command_arr, capture_output=True, text=True)
-	print('\n')
-	print(scp_result.stdout)
-	print('\n')
+	#print('\n')
+	#print(scp_result.stdout)
+	#print('\n')
 
 	## Editing external clock line
 	ms_filename = 'meascli.py'
@@ -873,15 +865,15 @@ if prog_section == '1':
 
 		## Transferring meascli.py back to nodes
 		ms_directory = '/local/repository/shout'
-		file_trans('meascli_transfer.sh',ssh_command,nums_arr,username,part1,part2,ms_filename,ms_directory)
+		file_trans('meascli_transfer.sh',nodes,ms_filename,ms_directory)
 
 	## Checking 3.run_cmd.sh file on nodes
-	command = 'scp ' + username + '@' + part1 + nums_arr[0] + part2 + ':/local/repository/bin/3.run_cmd.sh .'
+	command = 'scp ' + nodes[0] + ':/local/repository/bin/3.run_cmd.sh .'
 	command_arr = command.split(' ')
 	cmd_result = subprocess.run(command_arr, capture_output=True, text=True)
-	print('\n')
-	print(cmd_result.stdout)
-	print('\n')
+	#print('\n')
+	#print(cmd_result.stdout)
+	#print('\n')
 
 	cmd_filename = '3.run_cmd.sh'
 	linenum, found_line = find_line(cmd_filename,'save_iq_w_tx_file')
@@ -895,17 +887,17 @@ if prog_section == '1':
 		with open(cmd_filename,'w') as f:
 			f.writelines(cmd_lines)
 		cmd_directory = '/local/repository/bin'
-		file_trans('cmd_transfer.sh',ssh_command,nums_arr,username,part1,part2,cmd_filename,cmd_directory)
+		file_trans('cmd_transfer.sh',nodes,cmd_filename,cmd_directory)
 
 	## Modifying JSON file on nodes
 	json_filename = 'save_iq_w_tx_file.json'
 	json_directory = '/local/repository/etc/cmdfiles'
-	command = 'scp ' + username + '@' + part1 + nums_arr[0] + part2 + ':' + json_directory + '/' + json_filename + ' .'
+	command = 'scp ' + nodes[0] + ':' + json_directory + '/' + json_filename + ' .'
 	command_arr = command.split(' ')
 	json_result = subprocess.run(command_arr, capture_output=True, text=True)
-	print('\n')
-	print(json_result.stdout)
-	print('\n')
+	#print('\n')
+	#print(json_result.stdout)
+	#print('\n')
 
 	## Which lines would you like to modify in the JSON file?
 	print(Fore.RED + '\nThe following are in reference to the TX JSON file. For each, if you would like to keep the default, press enter. If you would like to change the default, type the new value you would like in the same format as the given default.\n' + Style.RESET_ALL)
@@ -1000,10 +992,10 @@ if prog_section == '1':
 		print('Done! JSON file ready.')
 
 	# transfer JSON file back to nodes
-	file_trans('json_transfer.sh',ssh_command,nums_arr,username,part1,part2,json_filename,json_directory)
+	file_trans('json_transfer.sh',nodes,json_filename,json_directory)
 
 	## Confirm connection to nodes after all modifications
-	print('\nConfirm connection on all nodes by running ' + Fore.RED + 'uhd_usrp_probe' + Style.RESET_ALL + ' on all nodes (excluding orch).\nIf a node complains about a firmware mismatch:\n 1. Run ' + Fore.RED + './setup_x310.sh' + Style.RESET_ALL + ' on that node.\n2. Power cycle/reboot that node using the gear symbol in the POWDER Experiment List View.\n3. Run ' + Fore.RED + 'uhd_usrp_probe' + Style.RESET_ALL + ' on the node again. Repeat if needed.\n')
+	print('\nFor any cellsdr1-[site]-comp and cbrssdr1-[site]-comp nodes in the experiment, confirm connection by running ' + Fore.RED + 'uhd_usrp_probe' + Style.RESET_ALL + '.\nIf a node complains about a firmware mismatch:\n1. Run ' + Fore.RED + './setup_x310.sh' + Style.RESET_ALL + ' on that node.\n2. Power cycle/reboot that node using the gear symbol in the POWDER Experiment List View.\n3. Run ' + Fore.RED + 'uhd_usrp_probe' + Style.RESET_ALL + ' on the node again. Repeat if needed.\n')
 
 	###########################################################################################
 
@@ -1011,10 +1003,7 @@ if prog_section == '1':
 	if step5 != 'y':
 		exit()
 
-	print('Continuing program....')
-	print('\nSTEP 5')
-
-	print('\n\n ##### Running POWDER Experiment ##### \n\n')
+	print('STEP 5: Running POWDER Experiment\n')
 	print('Run the following commands in the specified node/orch Terminal window:\n')
 
 	## EXPERIMENT COLLECTION INSTRUCTIONS
@@ -1024,7 +1013,7 @@ if prog_section == '1':
 	print('You should see data collection information printed in STDOUT of the second orch session during collection.')
 	print('\nWAIT to continue until the second orch session returns to the command prompt.')
 
-	conf_meas = input('\n\nContinue? (y/n): ')
+	conf_meas = input('\nContinue? (y/n): ')
 	if conf_meas != 'y':
 		exit()
 
@@ -1040,12 +1029,12 @@ if prog_section == '1':
 		print('Folder to SCP from remote host: ' + shout_folder_options)
 
 	# SCP data collection results from remote host
-	command = 'scp -r ' + ssh_command + ':/local/data/' + shout_folder_options + ' .'
+	command = 'scp -r ' + nodes[0] + ':/local/data/' + shout_folder_options + ' .'
 	command_arr = command.split(' ')
 	folder_result = subprocess.run(command_arr, capture_output=True, text=True)
-	print('\n')
-	print(folder_result.stdout)
-	print('\n')
+	#print('\n')
+	#print(folder_result.stdout)
+	#print('\n')
 	print('If no folders/files were transferred from remote host, run ' + Fore.RED + 'ls /local/data/' + Style.RESET_ALL + ' on orch node and check if there is a folder entitled \'Shout_meas_MM-DD-YYYY_HH-MM-SS\' where MM-DD-YYYY is the date of collection and HH-MM-SS is the time of collection. If this folder does exist, manually run the following command, updating the necessary fields, to scp the data to your local host. The folder should have three files: log, measurements.hdf5, and save_iq_w_tx_file.json: \n' + Fore.RED + 'scp -r <username>@<orch_node_hostname>:/local/data/Shout_meas_MM-DD-YYYY_HH-MM-SS .' + Style.RESET_ALL)
 	
 	pre = [filename for filename in os.listdir('.') if filename.startswith(shout_folder_options[:-1])]
@@ -1062,13 +1051,9 @@ if prog_section == '1':
 	if step6 != 'y':
 		exit()
 
-	print('Continuing program....')
-
 ################# Continue whether choice was '1' or '2': WATCH Post-Processing ###################
 
-print('\nSTEP 6')
-
-print('Offset Estimation with WATCH: Full-packet Cross Correlation\n')
+print('STEP 6: Offset Estimation with WATCH & Full-packet Cross Correlation\n')
 print('WATCH: A Distributed Clock Time Offset Estimation Tool on POWDER')
 print('Author: Cassie Jeng, August 2023, Version 0.1')
 print('Parse collected HDF5 data files from SHOUT, calculate the index offset from the beginning of the RX packet to the index of highest cross-correlation with full transmitted packet, estimate the distributed clock time offset at each of the experiment nodes from the network\'s global time')
@@ -1077,10 +1062,10 @@ print('Also includes: PSD, SNR, and LSE/RMSE analysis\n')
 print('Over-the-air Narrowband QPSK Modulation and Demodulation: from MMW 2023')
 print('Authors: Cassie Jeng, Neal Patwari, Aarti Singh, Jie Wang, Meles Gebreyesus Weldegebriel\n')
 
-print('Loading Data')
+# Loading Data
 # folder = input('Input name of folder where Shout results were saved. Format should match Shout_meas_MM-DD-YYYY_HH-MM-SS: ')
 IQ_filename = fn # name used in IQ generation for file
-print('Using data from ' + folder[11:21] + ' data collection.\n')
+print('Loading data from ' + folder[11:21] + ' data collection.\n')
 
 jsonfile = 'save_iq_w_tx_file.json'
 rxrepeat, samp_rate, txlocs, rxlocs = JsonLoad(folder, jsonfile)
