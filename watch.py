@@ -1,5 +1,5 @@
 # WATCH: A Distributed Clock Time Offset Estimation Tool for Software-Defined Radio Platforms
-# Last Modified - 11/20/2024
+# Last Modified - 11/21/2024
 # Author - Cassie Jeng
 
 # Import packages
@@ -499,11 +499,14 @@ def least_sq_error(col_num, estimate, delta, A, links):
 		plt.show()
 
 	# finding root mean squared error for repNum (col_num)
-	print(' ----- Root Mean Squared Error for Column ' + str(col_num) + ' ----- ')
+	print(' ----- Root Mean Squared Error for Iteration ' + str(col_num) + ' ----- ')
 	RMSE = math.sqrt(np.square(error).mean())
-	print(RMSE)
-	print('\n')
+	print(format(RMSE,'.4f') + ' samples')
+	# print('\n')
 	return RMSE, error
+
+def samples_to_ms(value, samp_rate):
+	return (float)((value/samp_rate)*1000)
 
 def print_results(col_num, rx_names, e_est, T_est):
 	print(" ---------- column (repNum) " + str(col_num) + " in delta data ---------- ")
@@ -519,6 +522,22 @@ def print_results(col_num, rx_names, e_est, T_est):
 			print("(~, " + rx_temp + ") -----  [" + format(e_est[r][0],'.7f') + "]  ----- [" + format(T_est[r][0],'.7f') + ']')
 		else:
 			print("(~, " + rx_temp + ") -----  [" + format(e_est[r][0],'.8f') + "]  ----- [" + format(T_est[r][0],'.8f') + ']')
+		r += 1
+
+def print_results_ms(col_num, rx_names, e_est, samp_rate):
+	print(" -------- column (repNum) " + str(col_num) + " in delta data -------- ")
+	print(Fore.RED + "(~, rx_name ) ----- offset from " + rx_names[0] + " in ms" + Style.RESET_ALL)
+	r = 0
+
+	for rx in rx_names:
+		rx_temp = rx
+		if len(rx) != len("browning"):
+			for i in range(len("browning")-len(rx)):
+				rx_temp += " "
+		if e_est[r][0] < 0:
+			print("(~, " + rx_temp + ") ----- [" + format(samples_to_ms(e_est[r][0],samp_rate),'.3f') + "]")
+		else:
+			print("(~, " + rx_temp + ") ----- [" + format(samples_to_ms(e_est[r][0],samp_rate),'.4f') + "]")
 		r += 1
 
 def round_string(RMSE):
@@ -789,7 +808,7 @@ if prog_section == '1':
 	###########################################################################################
 
 	step4 = input('\nContinue with Modifying Node Files & Setting up for Experiment? (y/n): ')
-	if step4 != 'y':
+	if step4 == 'n':
 		exit()
 
 	print('STEP 4: Set up Nodes for Experiment: IQ file, meascli.py, 3.run_cmd.sh, save_iq_w_tx_file.json')
@@ -1153,7 +1172,7 @@ for r in range(1,rxrepeat+1):
 
 	e_est_1, T_est_1, estimate_1 = find_e_vector(delta_1,A,pinvA,rx_names,snr_1,weighted)
 
-	print_results(r, rx_names, e_est_1, T_est_1)
+	print_results_ms(r, rx_names, e_est_1, samp_rate)
 	RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links)
 	if DEBUG:
 		inv_snr_1 = plot_snr_error(snr_1,error_1,r)
@@ -1161,9 +1180,9 @@ for r in range(1,rxrepeat+1):
 	RMSEs.append(RMSE_1)
 
 # RMSE_ratio = min(RMSEs)/max(RMSEs)
-print(Fore.RED + 'Root Mean Squared Error (RMSE) across all links for each Iteration' + Style.RESET_ALL)
+print(Fore.RED + '\nRoot Mean Squared Error (RMSE) across all links for each Iteration' + Style.RESET_ALL)
 for rme in range(1,len(RMSEs)+1):
-	print('Iteration ' + str(rme) + ': ' + str(RMSEs[rme-1]))
+	print('Iteration ' + str(rme) + ': ' + format(RMSEs[rme-1],'.4f') + ' samples')
 # print('\nRMSE ratio between iterations:', RMSE_ratio)
 
 plt.scatter(np.array(list(range(1,len(RMSEs)+1))),np.array(RMSEs))
