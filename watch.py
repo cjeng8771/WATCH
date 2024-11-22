@@ -420,7 +420,8 @@ def correct_difference(col_num, delta, rx_names, off):
 		small.sort()
 		small = list(small for small,_ in itertools.groupby(small))
 		for sm in small:
-			print('Column '+str(col_num)+', Section '+str(s)+', Index '+str(sm[0])+' -- '+str(sm[1]))
+			if DEBUG:
+				print('Column '+str(col_num)+', Section '+str(s)+', Index '+str(sm[0])+' -- '+str(sm[1]))
 			delta[(sm[0] + s*limit)] += off # 4072, 4096
 		s += 1
 	return delta
@@ -499,10 +500,10 @@ def least_sq_error(col_num, estimate, delta, A, links):
 		plt.show()
 
 	# finding root mean squared error for repNum (col_num)
-	print(' ----- Root Mean Squared Error for Iteration ' + str(col_num) + ' ----- ')
 	RMSE = math.sqrt(np.square(error).mean())
-	print(format(RMSE,'.4f') + ' samples')
-	# print('\n')
+	if DEBUG:
+		print(' ----- Root Mean Squared Error for Iteration ' + str(col_num) + ' ----- ')
+		print(format(RMSE,'.4f') + ' samples')
 	return RMSE, error
 
 def samples_to_ms(value, samp_rate):
@@ -975,7 +976,7 @@ if prog_section == '1':
 
 	## EXPERIMENT COLLECTION INSTRUCTIONS
 	print('1. In the first ' + Fore.RED + 'orch' + Style.RESET_ALL + ' session, run the command to start the orch: ' + Fore.RED + './1.start_orch.sh' + Style.RESET_ALL)
-	print('2. In each of the ' + Fore.RED + 'non-orch nodes' + Style.RESET_ALL + ' sessions, run the following two commands in sequence to resize the buffer and start the clients:\n    ' + Fore.RED + 'sudo sysctl -w net.core.wmem_max=24862979\n    ./2.start_client.sh\n' + Style.RESET_ALL + 'Wait until all non-orch nodes say \"Waiting for command...\"')
+	print('2. In each of the ' + Fore.RED + 'non-orch nodes' + Style.RESET_ALL + ' sessions, run the following two commands in sequence to resize the buffer and start the clients:\n' + Fore.RED + 'sudo sysctl -w net.core.wmem_max=24862979\n./2.start_client.sh\n' + Style.RESET_ALL + 'Wait until all non-orch nodes say \"Waiting for command...\"')
 	print('3. In the second ' + Fore.RED + 'orch' + Style.RESET_ALL + ' session, run the command to initiate data collection: ' + Fore.RED + './3.run_cmd.sh' + Style.RESET_ALL)
 	print('You should see data collection information printed in STDOUT of the second orch session during collection.')
 	print('\nWAIT to continue until the second orch session returns to the command prompt.')
@@ -1180,23 +1181,25 @@ for r in range(1,rxrepeat+1):
 	RMSEs.append(RMSE_1)
 
 # RMSE_ratio = min(RMSEs)/max(RMSEs)
-print(Fore.RED + '\nRoot Mean Squared Error (RMSE) across all links for each Iteration' + Style.RESET_ALL)
-for rme in range(1,len(RMSEs)+1):
-	print('Iteration ' + str(rme) + ': ' + format(RMSEs[rme-1],'.4f') + ' samples')
+if DEBUG:
+	print(Fore.RED + '\nRoot Mean Squared Error (RMSE) across all links for each Iteration' + Style.RESET_ALL)
+	for rme in range(1,len(RMSEs)+1):
+		print('Iteration ' + str(rme) + ': ' + format(RMSEs[rme-1],'.4f') + ' samples')
 # print('\nRMSE ratio between iterations:', RMSE_ratio)
 
-plt.scatter(np.array(list(range(1,len(RMSEs)+1))),np.array(RMSEs))
-plt.grid()
-plt.xlabel('Iteration (repNum) Number in delta data')
-plt.ylabel('RMSE')
-plt.title('Scatter Plot: RMSE for each Iteration (repNum)')
-plt.show()
+if DEBUG:
+	plt.scatter(np.array(list(range(1,len(RMSEs)+1))),np.array(RMSEs))
+	plt.grid()
+	plt.xlabel('Iteration (repNum) Number in delta data')
+	plt.ylabel('RMSE')
+	plt.title('Scatter Plot: RMSE for each Iteration (repNum)')
+	plt.show()
 
-plt.bar(np.array([str(i) for i in range(1,len(RMSEs)+1)]),np.array(RMSEs))
-plt.xlabel('Iteration (repNum) Number in delta data')
-plt.ylabel('RMSE')
-plt.title('Bar Chart: RMSE for each Iteration (repNum)')
-plt.show()
+	plt.bar(np.array([str(i) for i in range(1,len(RMSEs)+1)]),np.array(RMSEs))
+	plt.xlabel('Iteration (repNum) Number in delta data')
+	plt.ylabel('RMSE')
+	plt.title('Bar Chart: RMSE for each Iteration (repNum)')
+	plt.show()
 
 ## Program END ##
 print('\n---------- WATCH PROGRAM END ----------\n\n\n\n\n')
