@@ -33,11 +33,18 @@ import datetime
 rc('xtick',labelsize=14)
 rc('ytick',labelsize=14)
 
-# Establish DEBUG capabilities
+# Establish DEBUG & PLOTS capabilities
 DEBUG_D = input('\nDEBUG to show intermediate steps? [y/n]:')
 DEBUG = False
 if DEBUG_D == 'y':
 	DEBUG = True
+
+PLOTS = False
+if DEBUG:
+	PLOTS_D = input('PLOT to show all plots produced from program?\nNote: A plot for all iterations of each link will be produced, in addition to other program plots. These visuals will all need to be viewed, saved (if desired), and closed to be able to proceed with the program. [n] will still show a few plots of each type if DEBUG was enabled. [y/n]:')
+	if PLOTS_D == 'y':
+		PLOTS = True
+
 
 ###########################################################################################
 
@@ -262,6 +269,8 @@ def traverse_dataset(meas_folder):
 def plotOnePSDForEachLink(rx_data, txrxloc, samp_rate=250000, repNums=4):
 	for txname in rx_data:
 		for i in range(0, len(rx_data[txname]), repNums):
+			if PLOTS == False and i > repNums:
+				break
 			plt.figure()
 			plt.psd(rx_data[txname][i][0], Fs = samp_rate/1000)
 			plt.ylim(-110,-60)
@@ -335,7 +344,7 @@ def createPreambleSignal(A, N, alpha, Lp):
 
 	return (s_0_I + 1j*s_0_Q), pulse
 
-def crossCorrelationMax(rx0, packetSignal, peaks_arr):
+def crossCorrelationMax(rx0, packetSignal, peaks_arr, ptdg):
 	# Cross correlate with the original packet to find it in the noisy signal
 	lags = signal.correlation_lags(len(rx0), len(packetSignal), mode='same')
 	xcorr_out = signal.correlate(rx0, packetSignal, mode='same')
@@ -355,7 +364,7 @@ def crossCorrelationMax(rx0, packetSignal, peaks_arr):
 	peaks = np.array([peak_1, peak_2])
 	peaks_arr.append(abs(peak_1-peak_2))
 
-	if DEBUG:
+	if ptdg:
 		plt.figure()
 		plt.plot(lags, xcorr_mag, label='|X-Correlation|')
 		plt.legend()
@@ -468,13 +477,13 @@ def plot_snr_error(snr, error, col_num):
 	plt.show()
 	return inv_snr
 
-def least_sq_error(col_num, estimate, delta, A, links):
+def least_sq_error(col_num, estimate, delta, A, links, ptdg):
 	est_delta = np.dot(A,estimate[1:])
 	error = abs(delta - est_delta)
 
 	i = np.array([*range(len(links))]).reshape(len(links),1)
 
-	if DEBUG:
+	if ptdg:
 		#plotting error for each link
 		print(' ----- Plotting Link Error for Column ' + str(col_num) + ' ----- ')
 		plt.plot(i,error)
@@ -614,12 +623,12 @@ if prog_section == '1':
 		if DEBUG:
 			print('QPSK_samples[0:10]: ', QPSK_samples[0:10])
 		QPSK_samples_Final = np.hstack([np.zeros(1024, dtype=type(QPSK_samples[0])),QPSK_samples])
-		plt.figure()
-		plt.plot(np.real(QPSK_samples_Final[1700:2000]),label='Real Signal')
-		plt.plot(np.imag(QPSK_samples_Final[1700:2000]),label='Imag Signal')
-		plt.grid('on')
-		plt.legend()
 		if DEBUG:
+			plt.figure()
+			plt.plot(np.real(QPSK_samples_Final[1700:2000]),label='Real Signal')
+			plt.plot(np.imag(QPSK_samples_Final[1700:2000]),label='Imag Signal')
+			plt.grid('on')
+			plt.legend()
 			print('QPSK_samples_Final[1020:1040]:\n',QPSK_samples_Final[1020:1040])
 
 		fn = input('\nfilename for binary IQ (without .iq extension):\n')
@@ -740,12 +749,12 @@ if prog_section == '1':
 		if DEBUG:
 			print('QPSK_samples[0:10]:\n',QPSK_samples[0:10])
 		QPSK_samples_Final = np.hstack([np.zeros(1024, dtype=type(QPSK_samples[0])),QPSK_samples])
-		plt.figure()
-		plt.plot(np.real(QPSK_samples_Final[1700:2000]),label='Real Signal')
-		plt.plot(np.imag(QPSK_samples_Final[1700:2000]),label='Imag Signal')
-		plt.grid('on')
-		plt.legend()
 		if DEBUG:
+			plt.figure()
+			plt.plot(np.real(QPSK_samples_Final[1700:2000]),label='Real Signal')
+			plt.plot(np.imag(QPSK_samples_Final[1700:2000]),label='Imag Signal')
+			plt.grid('on')
+			plt.legend()
 			print('QPSK_samples_Final[1020:1040]:\n',QPSK_samples_Final[1020:1040])
 		
 		fn = input('\nfilename for binary IQ (without .iq extension):\n')
@@ -1068,8 +1077,10 @@ if DEBUG:
 	print(links)
 
 # PSD plots per link for first iteration (repNum)
-plotPSDYN = input("Would you like to visualize the PSD plots for the first iteration on each link? [y/n]: ")
-if plotPSDYN == 'y':
+# plotPSDYN = input("Would you like to visualize the PSD plots for the first iteration on each link? [y/n]: ")
+# if plotPSDYN == 'y':
+if DEBUG:
+	print('Visualizing the PSD plots for the first iteration of each link:')
 	plotOnePSDForEachLink(rx_data, txrxloc, samp_rate, repNums=rxrepeat)
 
 # Calculate Lags
@@ -1082,15 +1093,19 @@ lag_data = []
 snr_data = []
 peaks_arr = []
 
-for tx in rx_names:
-	for rx in rx_names:
+plt_cnt = 0
+
+for tx in txlocs: #rx_names:
+	for rx in txlocs: #rx_names:
 		if tx != rx:
 			lags_row = []
 			snr_row = []
 			for repNum in range(rxrepeat):
 				# pick tx - rx pair
-				txloc = 'cbrssdr1-' + tx + '-comp'
-				rxloc = 'cbrssdr1-' + rx + '-comp'
+				#txloc = 'cbrssdr1-' + tx + '-comp'
+				#rxloc = 'cbrssdr1-' + rx + '-comp'
+				txloc = tx
+				rxloc = rx
 
 				rx_data[txloc] = np.vstack(rx_data[txloc])
 				rxloc_arr = np.array(txrxloc[txloc])
@@ -1106,11 +1121,20 @@ for tx in rx_names:
 
 				preambleSignal, pulse = createPreambleSignal(A,N,alpha,Lp)
 				packetSignal = get_samps_from_file(IQ_filename)
-				lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr)
+				if DEBUG and PLOTS:
+					lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr, True)
+				elif DEBUG and not PLOTS:
+					if plt_cnt < 2:
+						lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr, True)
+					else:
+						lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr, False)
+				else:
+					lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr, False)
 				snr, pxx = calculate_SNR(rx0)
 
 				lags_row.append(lagIndex)
 				snr_row.append(snr)
+				plt_cnt += 1
 			lag_data.append(lags_row)
 			snr_data.append(snr_row)
 
@@ -1162,6 +1186,7 @@ pinvA = np.linalg.pinv(A)
 # Make Delta Vectors, Make SNR Vectors, Correct Estimate Errors, Create Estimate Vectors, Printing Results, Least Square Error, Plotting SNR Error, Printing Error Results
 RMSEs = []
 weighted = int(input("Invoke the weighted least squares error method? [0/1]: "))
+plt_cnt = 0
 for r in range(1,rxrepeat+1):
 	print('\nIteration ' + str(r) + ' for all links:')
 	delta_1 = make_delta(r,links)
@@ -1174,11 +1199,20 @@ for r in range(1,rxrepeat+1):
 	e_est_1, T_est_1, estimate_1 = find_e_vector(delta_1,A,pinvA,rx_names,snr_1,weighted)
 
 	print_results_ms(r, rx_names, e_est_1, samp_rate)
-	RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links)
-	if DEBUG:
+	if DEBUG and PLOTS:
+		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True)
 		inv_snr_1 = plot_snr_error(snr_1,error_1,r)
+	elif DEBUG and not PLOTS:
+		if plt_cnt < 2:
+			RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True)
+			inv_snr_1 = plot_snr_error(snr_1,error_1,r)
+		else:
+			RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,False)
+	else:
+		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,False)
 	RMSE_1 = round_string(RMSE_1)
 	RMSEs.append(RMSE_1)
+	plt_cnt += 1
 
 # RMSE_ratio = min(RMSEs)/max(RMSEs)
 if DEBUG:
@@ -1188,6 +1222,7 @@ if DEBUG:
 # print('\nRMSE ratio between iterations:', RMSE_ratio)
 
 if DEBUG:
+	plt.figure()
 	plt.scatter(np.array(list(range(1,len(RMSEs)+1))),np.array(RMSEs))
 	plt.grid()
 	plt.xlabel('Iteration (repNum) Number in delta data')
@@ -1195,6 +1230,7 @@ if DEBUG:
 	plt.title('Scatter Plot: RMSE for each Iteration (repNum)')
 	plt.show()
 
+	plt.figure()
 	plt.bar(np.array([str(i) for i in range(1,len(RMSEs)+1)]),np.array(RMSEs))
 	plt.xlabel('Iteration (repNum) Number in delta data')
 	plt.ylabel('RMSE')

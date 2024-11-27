@@ -13,6 +13,7 @@ To run through the full experiment including data collection and WATCH:
 1. Run `python watch.py` on local host.
 2. Configuration
     * Choose [y/n] for debug. [y] will display print statements for all intermediate steps. [n] will display only important print statements and final results. 
+    * Choose [y/n] for plots. [y] will display all plots. [n] will display only a few examples of each plot type. Note: Depending on the number of nodes in the experiment, displaying all plots could produce a large number of plots, which must be closed before proceeding with the program, since it will produce, at least, one plot per iteration per link.
     * Choose [1] to run the entire program.
 3. Create Message to Transmit
     * To transmit plain text [p]: create a message that is 94 characters long. 
@@ -23,11 +24,11 @@ To run through the full experiment including data collection and WATCH:
     * **Note:** List View refers to the second tab in the table at the bottom of the screen when viewing the active ready experiment.
 5. Once all nodes are ready again, copy each listed `[username]@[node-name]` from the **SSH command** column in the table, and enter them, separated by a space, when prompted.
 6. Configuring Nodes for Transmission
-    * Follow all instructions printed to STDOUT that describe how to set up the node SSH sessions for the experiment. After continuing, the script will secure copy the IQ file previously created to all nodes and check that the `meascli.py` script on each node is enabling the use of the external clock.
+    * Follow all instructions printed to STDOUT that describe how to set up the node SSH sessions for the experiment. After continuing, the script will secure copy the IQ file previously created to the `/local/repository/shout/signal_library` directory in all nodes and check that the `meascli.py` script in the `/local/repository/shout` directory on each node is enabling the use of the external clock. 
     * When prompted about modifications to the experiment JSON file, hit enter to keep the default parameter or type the desired modification in the same format as the default is shown. 
     * **Note:** Make sure to choose a txfreq/rxfreq in the experiment's reserved range.
     * **Note:** Choose rxrepeat based on how many transmission iterations are desired for each link.
-    * Record the full ID listed in the **ID** column of the experiment table for every node, other than the orch, with a valid ssh command. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to all nodes for the experiment.
+    * Record the full ID listed in the **ID** column of the experiment table for every node, other than the orch, with a valid ssh command. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to the `/local/repository/etc/cmdfiles` directory on all nodes for the experiment.
 7. Running the Experiment
     * Follow all instructions printed to STDOUT. These will walk through testing preparation for the experiment and starting data collection with Shout. 
     * **Note:** The Shout measurement framework is used to automate TX and RX functions across multiple nodes in the POWDER network. 
