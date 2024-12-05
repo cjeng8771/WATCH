@@ -34,11 +34,13 @@ To run through the full experiment including data collection and WATCH:
     * **Note:** The Shout measurement framework is used to automate TX and RX functions across multiple nodes in the POWDER network. 
     * **Note:** When the second orch SSH session returns to the command prompt, the script will confirm there is a Shout data collection folder on the remote host and then secure copy it to the local host.
 8. Offset Estimation Post-Processing with WATCH
-    * **NOTE:** The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
-    * **NOTE:** The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
-    * **Final WATCH analysis results will be printed, by iteration, to STDOUT.**
     * WATCH reports an estimate local clock offset at each node, in comparison to one another, and with the first node as a reference for time zero, by cross correlating the received packet from the Shout data with the transmitted packet to find each node's offset index. Offset index is the length, in number of samples, between the local clock time zero and when the receiver actually receives the first sample of the transmitted packet.
     * The least square error and root mean squared error (RMSE) included in the final results compare each link's true found offset indicies to estimated offsets that are calculated using the WATCH algorithm results.
+    * The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
+    * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
+    * **Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu$s).**
+    * **NOTE:** Offset results on the order of 10s-100s of $\mu$s indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample_rate}$ (4$\mu$s when using the default sample_rate of 250kHz).
+    * **NOTE:** Offset results on the order of 1000s of $\mu$s indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
 
 ## Option (2): WATCH Post-Processing with Previous Data
 To run through analysis with WATCH for previously collected data:
@@ -49,8 +51,10 @@ To run through analysis with WATCH for previously collected data:
     * Choose [2] to run just WATCH post-processing.
 4. Enter the name of the Shout data folder and IQ transmitted file when prompted.
 5. Offset Estimation Post-Processing with WATCH
-    * **NOTE:** The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
-    * **NOTE:** The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
-    * **Final WATCH analysis results will be printed, by iteration, to STDOUT.**
     * WATCH reports an estimate local clock offset at each node, in comparison to one another, and with the first node as a reference for time zero, by cross correlating the received packet from the Shout data with the transmitted packet to find each node's offset index. Offset index is the length, in number of samples, between the local clock time zero and when the receiver actually receives the first sample of the transmitted packet.
     * The least square error and root mean squared error (RMSE) included in the final results compare each link's true found offset indicies to estimated offsets that are calculated using the WATCH algorithm results.
+    * The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
+    * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
+    * **Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu$s).**
+    * **NOTE:** Offset results on the order of 10s-100s of $\mu$s indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample_rate}$ (4$\mu$s when using the default sample_rate of 250kHz).
+    * **NOTE:** Offset results on the order of 1000s of $\mu$s indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.

@@ -1,5 +1,5 @@
 # WATCH: A Distributed Clock Time Offset Estimation Tool for Software-Defined Radio Platforms
-# Last Modified - 11/21/2024
+# Last Modified - 12/4/2024
 # Author - Cassie Jeng
 
 # Import packages
@@ -278,6 +278,7 @@ def plotOnePSDForEachLink(rx_data, txrxloc, samp_rate=250000, repNums=4):
 			plt.grid('on')
 			plt.title('TX: {} RX: {}'.format(txname, txrxloc[txname][i]))
 			plt.xlabel('Frequency (kHz)')
+			# PSD plot function has default y axis label: Power Spectral Density (dB/Hz)
 			plt.tight_layout()
 			plt.show()
 
@@ -366,11 +367,12 @@ def crossCorrelationMax(rx0, packetSignal, peaks_arr, ptdg):
 
 	if ptdg:
 		plt.figure()
-		plt.plot(lags, xcorr_mag, label='|X-Correlation|')
+		# plt.plot(lags, xcorr_mag, label='|X-Correlation|')
+		plt.plot(lags, xcorr_mag)
 		plt.legend()
 		# plt.plot(peaks, xcorr_mag[peaks], "x")
-		plt.ylabel('|X-Correlation|', fontsize=14)
-		plt.xlabel('Sample Index', fontsize=14)
+		plt.ylabel('|X-Correlation| with TX Packet', fontsize=14)
+		plt.xlabel('RX Packet Sample Index', fontsize=14)
 		plt.ylim((0,1))
 		plt.tight_layout()
 		plt.show()
@@ -417,7 +419,7 @@ def correct_difference(col_num, delta, rx_names, off):
 		for lag in section:
 			ind = 0
 			while(ind < limit):
-				if abs(lag - section[ind]) > 2000:
+				if abs(lag - section[ind]) > 2000: # hard coded
 					min_val = min(lag, section[ind])[0]
 					if min_val == lag:
 						small.append([lag_ind,min_val])
@@ -430,14 +432,15 @@ def correct_difference(col_num, delta, rx_names, off):
 		small = list(small for small,_ in itertools.groupby(small))
 		for sm in small:
 			if DEBUG:
-				print('Column '+str(col_num)+', Section '+str(s)+', Index '+str(sm[0])+' -- '+str(sm[1]))
+				# print(' ----- Estimate values corrected from wrap-around ----- ')
+				print('CORRECTED: Iteration '+str(col_num)+', Section '+str(s)+', Index '+str(sm[0])+' -- '+str(sm[1]))
 			delta[(sm[0] + s*limit)] += off # 4072, 4096
 		s += 1
 	return delta
 
 def calculate_SNR(rx_data, samp_rate=250000):
 	Pxx, freqs = plt.psd(rx_data, Fs = samp_rate/1000)
-
+	# too many hard coded values in this function
 	center_ind = int(len(Pxx)/2)
 	lower = center_ind - 10
 	upper = center_ind + 10
@@ -465,94 +468,106 @@ def make_snr_vecs(col_num, links):
 		sv += 1
 	return snr_vec
 
-def plot_snr_error(snr, error, col_num):
+def plot_snr_error(snr, error, col_num, samp_rate):
 	inv_snr = np.reciprocal(snr)
+	for i in range(len(error)):
+		error[i] = samples_to_us(error[i],samp_rate)
 
 	plt.figure()
 	plt.scatter(inv_snr, error)
-	plt.xlabel('1/SNR')
-	plt.ylabel('Delta Estimation Error (Samples)')
+	plt.xlabel('1/SNR (1/dB)')
+	plt.ylabel('Estimation Error (us)')
 	plt.grid()
-	plt.title('Estimation Error vs. 1/SNR for Each Link in Column ' + str(col_num))
+	plt.title('Estimation Error vs. 1/SNR for Each Link in Iteration ' + str(col_num))
 	plt.show()
 	return inv_snr
 
-def least_sq_error(col_num, estimate, delta, A, links, ptdg):
+def least_sq_error(col_num, estimate, delta, A, links, ptdg, samp_rate):
 	est_delta = np.dot(A,estimate[1:])
-	error = abs(delta - est_delta)
+	error = abs(delta - est_delta) #in samples
+	for i in range(len(error)):
+		error[i] = samples_to_us(error[i],samp_rate)
 
-	i = np.array([*range(len(links))]).reshape(len(links),1)
+	i = np.array([*range(len(links))]).reshape(len(links),1) # counting links [0,1,2,...len(links)-1]
 
 	if ptdg:
 		#plotting error for each link
-		print(' ----- Plotting Link Error for Column ' + str(col_num) + ' ----- ')
+		print(' ----- Plotting Error by Link for Iteration ' + str(col_num) + ' ----- ')
+		print('x-axis is links in the experiment, in order based on the node order specified earlier in program.')
 		plt.plot(i,error)
 		plt.grid()
-		plt.xlabel('Link Number')
-		plt.ylabel('Delta Estimation Error (Samples)')
-		plt.title('Estimation Error/Noise by Link for Column ' + str(col_num))
+		plt.xlabel('Link')
+		plt.ylabel('Estimation Error (us)')
+		plt.title('Estimation Error by Link for Iteration ' + str(col_num))
 		plt.show()
 
 		# plotting histogram of error for each link
-		print(' ----- Histogram Link Error for Column ' + str(col_num) + ' ----- ')
+		print(' ----- Histogram of Link Error for Iteration ' + str(col_num) + ' ----- ')
 		plt.hist(error)
 		plt.grid()
-		plt.xlabel('Delta Estimation Error for Column ' + str(col_num))
+		plt.xlabel('Histogram of Estimation Error by Link for Iteration ' + str(col_num))
 		plt.show()
 
 		# plotting histogram of MSE for each link
-		print(' ----- Histogram Link Squared Error for Column ' + str(col_num) + ' ----- ')
-		plt.hist(np.square(error * (1/250000)))
-		plt.grid()
-		plt.xlabel('Squared Error (T^2)')
-		plt.title('Histogram of Squared Estimation Error for Column ' + str(col_num))
-		plt.show()
+		# print(' ----- Histogram Link Squared Error for Iteration ' + str(col_num) + ' ----- ')
+		# plt.hist(np.square(error * (1/250000)))
+		# plt.grid()
+		# plt.xlabel('Squared Error (T^2)')
+		# plt.title('Histogram of Squared Estimation Error for Iteration ' + str(col_num))
+		# plt.show()
 
 	# finding root mean squared error for repNum (col_num)
 	RMSE = math.sqrt(np.square(error).mean())
 	if DEBUG:
 		print(' ----- Root Mean Squared Error for Iteration ' + str(col_num) + ' ----- ')
-		print(format(RMSE,'.4f') + ' samples')
+		print(format(samples_to_us(RMSE,samp_rate),'.4f') + ' us')
 	return RMSE, error
 
-def samples_to_ms(value, samp_rate):
-	return (float)((value/samp_rate)*1000)
+def samples_to_us(value, samp_rate):
+	#for ms: (float)((value/samp_rate)*1000)
+	return (float)((value/samp_rate)*1000000)
 
-def print_results(col_num, rx_names, e_est, T_est):
-	print(" ---------- column (repNum) " + str(col_num) + " in delta data ---------- ")
-	print(Fore.RED + "(~, rx_name ) -----    e_estimate    -----   T_estimate" + Style.RESET_ALL)
+def print_results_us(col_num, rx_names, e_est, samp_rate, lgr_ms, smr_ms):
+	print(" -------- Iteration " + str(col_num) + " -------- ")
+
+	max_len = -1
+	for each in rx_names:
+		if len(each) > max_len:
+			max_len = len(each)
+
+	title = 'rx_name'
+	if len(title) > max_len:
+		max_len = len(title)
+	
+	if len(title) < max_len:
+		for i in range(max_len-len(title)):
+			title += " "
+
+	print(Fore.RED + "(~, " + title + ") ----- offset from " + rx_names[0] + " in us" + Style.RESET_ALL)
 	r = 0
 
 	for rx in rx_names:
 		rx_temp = rx
-		if len(rx) != len("browning"):
-			for i in range(len("browning")-len(rx)):
+		if len(rx) != max_len:
+			for i in range(max_len-len(rx)):
 				rx_temp += " "
-		if e_est[r][0] < 0 or T_est[r][0] < 0:
-			print("(~, " + rx_temp + ") -----  [" + format(e_est[r][0],'.7f') + "]  ----- [" + format(T_est[r][0],'.7f') + ']')
+		delay = samples_to_us(e_est[r][0],samp_rate)
+		if delay < 0:
+			print("(~, " + rx_temp + ") ----- [" + format(delay,'.3f') + "]")
 		else:
-			print("(~, " + rx_temp + ") -----  [" + format(e_est[r][0],'.8f') + "]  ----- [" + format(T_est[r][0],'.8f') + ']')
-		r += 1
+			print("(~, " + rx_temp + ") ----- [" + format(delay,'.4f') + "]")
 
-def print_results_ms(col_num, rx_names, e_est, samp_rate):
-	print(" -------- column (repNum) " + str(col_num) + " in delta data -------- ")
-	print(Fore.RED + "(~, rx_name ) ----- offset from " + rx_names[0] + " in ms" + Style.RESET_ALL)
-	r = 0
-
-	for rx in rx_names:
-		rx_temp = rx
-		if len(rx) != len("browning"):
-			for i in range(len("browning")-len(rx)):
-				rx_temp += " "
-		if e_est[r][0] < 0:
-			print("(~, " + rx_temp + ") ----- [" + format(samples_to_ms(e_est[r][0],samp_rate),'.3f') + "]")
+		if abs(delay) >= 1000: #1 millisecond
+			lgr_ms.append(delay)
 		else:
-			print("(~, " + rx_temp + ") ----- [" + format(samples_to_ms(e_est[r][0],samp_rate),'.4f') + "]")
+			smr_ms.append(delay)
 		r += 1
+	
+	return lgr_ms, smr_ms
 
 def round_string(RMSE):
 	round_i = 6
-	while(len(str(RMSE)) > len('column #')):
+	while(len(str(RMSE)) > len('iteration')):
 		RMSE = round(RMSE,round_i)
 		round_i -= 1
 	return RMSE
@@ -576,7 +591,9 @@ if prog_section == '1':
 	data_d = input('\nInput option for IQ generation. p for plain text with preamble, r for pn codes with no preamble:')
 
 	# IQ Generation for Plain Text Data & PN Code Data
-	print('\nSTEP 1: IQ Generation: Create IQ File for Message to Transmit\n')
+
+	print('\n##################################################################\n')
+	print('STEP 1: IQ Generation: Create IQ File for Message to Transmit\n')
 	if data_d == 'p':
 		print('Generating IQ file for Plain Text Data with Preamble')
 		print('Program derived from Over-the-air Narrowband QPSK Modulation and Demodulation Tutorial, MWW 2023')
@@ -610,7 +627,9 @@ if prog_section == '1':
 		pulse = np.array(pulse)
 		pulse = np.reshape(pulse,pulse.size)
 		plt.figure()
-		plt.plot(pulse,label='SRRC pulse shape')
+		# plt.plot(pulse,label='SRRC pulse shape')
+		plt.plot(pulse)
+		plt.title('SRRC pulse shape')
 		plt.legend()
 
 		x_s_I = np.reshape(x_s_I, x_s_I.size)
@@ -627,6 +646,9 @@ if prog_section == '1':
 			plt.figure()
 			plt.plot(np.real(QPSK_samples_Final[1700:2000]),label='Real Signal')
 			plt.plot(np.imag(QPSK_samples_Final[1700:2000]),label='Imag Signal')
+			plt.xlabel('Packet to TX')
+			plt.ylabel('Imag and Real Amplitude')
+			plt.title('Imag and Real Samples to TX')
 			plt.grid('on')
 			plt.legend()
 			print('QPSK_samples_Final[1020:1040]:\n',QPSK_samples_Final[1020:1040])
@@ -736,8 +758,9 @@ if prog_section == '1':
 		pulse = np.array(pulse)
 		pulse = np.reshape(pulse,pulse.size)
 		plt.figure()
-		plt.plot(pulse,label='SRRC pulse shape')
-		plt.legend()
+		plt.plot(pulse)
+		plt.title('SRRC pulse shape')
+		#plt.legend()
 
 		x_s_I = np.reshape(x_s_I, x_s_I.size)
 		x_s_Q = np.reshape(x_s_Q, x_s_Q.size)
@@ -753,6 +776,9 @@ if prog_section == '1':
 			plt.figure()
 			plt.plot(np.real(QPSK_samples_Final[1700:2000]),label='Real Signal')
 			plt.plot(np.imag(QPSK_samples_Final[1700:2000]),label='Imag Signal')
+			plt.xlabel('Packet to TX')
+			plt.ylabel('Imag and Real Amplitude')
+			plt.title('Imag and Real Samples to TX')
 			plt.grid('on')
 			plt.legend()
 			print('QPSK_samples_Final[1020:1040]:\n',QPSK_samples_Final[1020:1040])
@@ -773,6 +799,7 @@ if prog_section == '1':
 	if step2 != 'y':
 		exit()
 
+	print('\n##################################################################\n')
 	print('STEP 2: Reserve Resources & Instantiate an Experiment using POWDER')
 	print('\n ----- Navigate to https://powderwireless.net/ ----- ')
 	print('1. Login\n2. Create a resource reservation with desired nodes\n3. Start an experiment using the shout-long-measurement profile or create a new profile via Experiments -> Create Experiment Profile -> Git Repo -> add repo link (https://gitlab.flux.utah.edu/frost/proj-radio-meas) -> select the profile')
@@ -784,6 +811,7 @@ if prog_section == '1':
 	if step3 != 'y':
 		exit()
 
+	print('\n##################################################################\n')
 	print('STEP 3: Set up POWDER Experiment: All Node and Orchestrator Sessions')
 	print('\n ----- Open the created POWDER experiment ----- ')
 	print('1. Navigate to List View for the experiment nodes.\n2. Click the check box next to the gear symbol in the header of the experiment node list. Click the gear symbol drop down menu and reboot all nodes. Wait until all nodes are ready again.')
@@ -821,6 +849,7 @@ if prog_section == '1':
 	if step4 == 'n':
 		exit()
 
+	print('\n\n##################################################################\n')
 	print('STEP 4: Set up Nodes for Experiment: IQ file, meascli.py, 3.run_cmd.sh, save_iq_w_tx_file.json')
 
 	## Transferring IQ file to all nodes
@@ -980,6 +1009,7 @@ if prog_section == '1':
 	if step5 != 'y':
 		exit()
 
+	print('\n##################################################################\n')
 	print('STEP 5: Running POWDER Experiment\n')
 	print('Run the following commands in the specified node/orch Terminal window:\n')
 
@@ -994,6 +1024,7 @@ if prog_section == '1':
 	if conf_meas != 'y':
 		exit()
 
+	print('\n##################################################################\n')
 	print('Confirming and transferring measurements from remote host...')
 	today = datetime.datetime.now()
 	today_month = str(today.strftime("%m"))
@@ -1028,6 +1059,7 @@ if prog_section == '1':
 
 ################# Continue whether choice was '1' or '2': WATCH Post-Processing ###################
 
+print('\n##################################################################\n')
 print('STEP 6: Offset Estimation with WATCH & Full-packet Cross Correlation\n')
 print('WATCH: A Distributed Clock Time Offset Estimation Tool on POWDER')
 print('Author: Cassie Jeng, August 2023, Version 0.1')
@@ -1048,7 +1080,10 @@ rx_data, _, txrxloc = traverse_dataset(folder)
 # setting up the links
 rx_names = []
 for txl in txlocs:
-	rx_names.append(txl.split('-')[1])
+	if txl.split('-')[0] == 'cbrssdr1':
+		rx_names.append(txl.split('-')[1])
+	else:
+		rx_names.append(txl.replace('-','_'))
 
 rx_names = sorted(rx_names)
 if DEBUG:
@@ -1073,7 +1108,7 @@ for pair in links_names:
 
 if DEBUG:
 	print('\n')
-	print(" ----- all node links ----- ")
+	print(" ----- all links ----- ")
 	print(links)
 
 # PSD plots per link for first iteration (repNum)
@@ -1140,7 +1175,7 @@ for tx in txlocs: #rx_names:
 
 lag_data = np.array(lag_data)
 snr_data = np.array(snr_data)
-off = 4072
+off = 4072 # hard coded -- fix
 
 for r in range(rxrepeat):
 	file_name = 'col_' + str(r+1) + '.txt'
@@ -1148,7 +1183,8 @@ for r in range(rxrepeat):
 		for dat in lag_data[:,r]:
 			f.write(str(dat) + ',\n')
 
-print(' ----- Lag data written to files ----- ')
+if DEBUG:
+	print(' ----- Lag data written to files ----- ')
 
 for r in range(rxrepeat):
 	file_name = 'snr_' + str(r+1) + '.txt'
@@ -1156,8 +1192,8 @@ for r in range(rxrepeat):
 		for dat in snr_data[:,r]:
 			f.write(str(dat) + ',\n')
 
-print(' ----- SNR data written to files ----- ')
 if DEBUG:
+	print(' ----- SNR data written to files ----- ')
 	print("Packet Length:", off)
 
 # Setting up the A Matrix
@@ -1187,54 +1223,69 @@ pinvA = np.linalg.pinv(A)
 RMSEs = []
 weighted = int(input("Invoke the weighted least squares error method? [0/1]: "))
 plt_cnt = 0
+lgr_ms = []
+smr_ms = []
 for r in range(1,rxrepeat+1):
-	print('\nIteration ' + str(r) + ' for all links:')
+	# print('\nIteration ' + str(r) + ' for all links:')
+	# print('\nIteration ' + str(r) + ':')
+	print('')
 	delta_1 = make_delta(r,links)
 	snr_1 = make_snr_vecs(r,links)
 	snr_1 = snr_1 / (sum(snr_1))
 
-	print(' ----- Estimate values corrected from wrap-around ----- ')
+	# print(' ----- Estimate values corrected from wrap-around ----- ')
 	delta_1 = correct_difference(r,delta_1,rx_names,off)
 
 	e_est_1, T_est_1, estimate_1 = find_e_vector(delta_1,A,pinvA,rx_names,snr_1,weighted)
 
-	print_results_ms(r, rx_names, e_est_1, samp_rate)
+	lgr_ms, smr_ms = print_results_us(r, rx_names, e_est_1, samp_rate, lgr_ms, smr_ms)
+
 	if DEBUG and PLOTS:
-		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True)
-		inv_snr_1 = plot_snr_error(snr_1,error_1,r)
+		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True,samp_rate)
+		inv_snr_1 = plot_snr_error(snr_1,error_1,r,samp_rate)
 	elif DEBUG and not PLOTS:
 		if plt_cnt < 2:
-			RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True)
-			inv_snr_1 = plot_snr_error(snr_1,error_1,r)
+			RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True,samp_rate)
+			inv_snr_1 = plot_snr_error(snr_1,error_1,r,samp_rate)
 		else:
-			RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,False)
+			RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,False,samp_rate)
 	else:
-		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,False)
+		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,False,samp_rate)
 	RMSE_1 = round_string(RMSE_1)
 	RMSEs.append(RMSE_1)
 	plt_cnt += 1
+
+if len(lgr_ms) >= 2*len(smr_ms):
+	print(Fore.RED + '\nNot Synchronized.\n' + Style.RESET_ALL + 'Across all iterations, this experiment has majority results on the order of milliseconds.\nOffset results on the order of 1000s of microseconds indicate a non synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes\' local clocks are significantly offset from one another.\n')
+elif len(smr_ms) >= 2*len(lgr_ms):
+	print(Fore.RED + '\nSynchronized.\n' + Style.RESET_ALL + 'Across all iterations, this experiment has majority results on the order of microseconds.\nOffset results on the order of 10s-100s of microseconds indicate a synchronized network. However, results should not be expected to be much less than ' + str(samples_to_us(1,samp_rate)) + 'us (1/samp_rate).\n')
+else:
+	print(Fore.RED + '\nInconclusive.\n' + Style.RESET_ALL + 'There is no clear majority within the results as to whether the nodes are synchronized or not. The results are showing both synchronized offsets on the order of microseconds and non-synchronized offsets on the order of milliseconds.\nIt is recommeded to power-cycle the nodes and run the experiment again.\n')
 
 # RMSE_ratio = min(RMSEs)/max(RMSEs)
 if DEBUG:
 	print(Fore.RED + '\nRoot Mean Squared Error (RMSE) across all links for each Iteration' + Style.RESET_ALL)
 	for rme in range(1,len(RMSEs)+1):
-		print('Iteration ' + str(rme) + ': ' + format(RMSEs[rme-1],'.4f') + ' samples')
+		print('Iteration ' + str(rme) + ': ' + format(samples_to_us(RMSEs[rme-1],samp_rate),'.4f') + ' us')
 # print('\nRMSE ratio between iterations:', RMSE_ratio)
 
 if DEBUG:
+	for i in range(len(RMSEs)):
+		RMSEs[i] = samples_to_us(RMSEs[i],samp_rate)
+	
 	plt.figure()
 	plt.scatter(np.array(list(range(1,len(RMSEs)+1))),np.array(RMSEs))
 	plt.grid()
-	plt.xlabel('Iteration (repNum) Number in delta data')
-	plt.ylabel('RMSE')
-	plt.title('Scatter Plot: RMSE for each Iteration (repNum)')
+	plt.xlabel('Iteration Number')
+	plt.ylabel('RMSE (us)')
+	plt.title('Scatter Plot of RMSE in us by Iteration')
 	plt.show()
 
 	plt.figure()
 	plt.bar(np.array([str(i) for i in range(1,len(RMSEs)+1)]),np.array(RMSEs))
-	plt.xlabel('Iteration (repNum) Number in delta data')
-	plt.ylabel('RMSE')
-	plt.title('Bar Chart: RMSE for each Iteration (repNum)')
+	plt.xlabel('Iteration Number')
+	plt.ylabel('RMSE (us)')
+	plt.title('Bar Chart of RMSE in us by Iteration')
 	plt.show()
 
 ## Program END ##
