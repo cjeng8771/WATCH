@@ -54,7 +54,7 @@ To run through the full experiment including data collection and WATCH:
 > Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu s$).
 
 > [!NOTE]
-> Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).
+> Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample-rate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).\
 > Offset results on the order of 1000s of $\mu s$ indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
 
 ## Option (2): WATCH Post-Processing with Previous Data
@@ -75,5 +75,5 @@ To run through analysis with WATCH for previously collected data:
 > Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu s$).
 
 > [!NOTE]
-> Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).
+> Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample-rate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).\
 > Offset results on the order of 1000s of $\mu s$ indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
