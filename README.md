@@ -33,11 +33,11 @@ To run through the full experiment including data collection and WATCH:
 6. Configuring Nodes for Transmission
     * Follow all instructions printed to STDOUT that describe how to set up the node SSH sessions for the experiment. After continuing, the script will secure copy the IQ file previously created to the `/local/repository/shout/signal_library` directory in all nodes and check that the `meascli.py` script in the `/local/repository/shout` directory on each node is enabling the use of the external clock. 
     * When prompted about modifications to the experiment JSON file, hit enter to keep the default parameter or type the desired modification in the same format as the default is shown. 
+    * Record the full ID listed in the **ID** column of the experiment table for every node, other than the orch, with a valid ssh command. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to the `/local/repository/etc/cmdfiles` directory on all nodes for the experiment.
 
 > [!IMPORTANT]
 > Make sure to choose a txfreq/rxfreq in the experiment's reserved range. Choose rxrepeat based on how many transmission iterations are desired for each link.
 
-    * Record the full ID listed in the **ID** column of the experiment table for every node, other than the orch, with a valid ssh command. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to the `/local/repository/etc/cmdfiles` directory on all nodes for the experiment.
 7. Running the Experiment
     * Follow all instructions printed to STDOUT. These will walk through testing preparation for the experiment and starting data collection with Shout. The Shout measurement framework is used to automate TX and RX functions across multiple nodes in the POWDER network. 
 
@@ -51,13 +51,13 @@ To run through the full experiment including data collection and WATCH:
     * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
 
 > [!IMPORTANT]
-> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\Mu$s).
+> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu$).
 
 > [!NOTE]
-> Offset results on the order of 10s-100s of $\Mu$s indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4$\Mu$s when using the default sample_rate of 250kHz).
+> Offset results on the order of 10s-100s of $\mu$ s indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mu$ s when using the default sample_rate of 250kHz).
 
 > [!NOTE]
-> Offset results on the order of 1000s of $\Mu$s indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
+> Offset results on the order of 1000s of $\mu$ s indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
 
 ## Option (2): WATCH Post-Processing with Previous Data
 To run through analysis with WATCH for previously collected data:
