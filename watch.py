@@ -1,5 +1,5 @@
 # WATCH: A Distributed Clock Time Offset Estimation Tool for Software-Defined Radio Platforms
-# Last Modified - 12/4/2024
+# Last Modified - 12/6/2024
 # Author - Cassie Jeng
 
 # Import packages
@@ -572,6 +572,58 @@ def round_string(RMSE):
 		round_i -= 1
 	return RMSE
 
+def choose_taps(N_stages):
+	L_codelen = (2 ** N_stages) - 1
+	if N_stages == 3:
+		ptaps = '[3,2] [3,1]'
+	elif N_stages == 4:
+		ptaps = '[4,3] [4,1]'
+	elif N_stages == 5:
+		ptaps = '[5,3] [5,2]'
+	elif N_stages == 6:
+		ptaps = '[6,5] [6,1]'
+	elif N_stages == 7:
+		ptaps = '[7,6] [7,3] [7,1]'
+	elif N_stages == 8:
+		ptaps = '[8,6,5,4] [8,6,5,3]'
+	elif N_stages == 9:
+		ptaps = '[9,5] [9,6,4,3]'
+	elif N_stages == 10:
+		ptaps = '[10,7] [10,3]'
+	elif N_stages == 11:
+		ptaps = '[11,9] [11,8,5,2]'
+	elif N_stages == 12:
+		ptaps = '[12,6,4,1]'
+	elif N_stages == 13:
+		ptaps = '[13,4,3,1]'
+	elif N_stages == 14:
+		ptaps = '[14,5,3,1]'
+	elif N_stages == 15:
+		ptaps = '[15,14] [15,4]'
+	elif N_stages == 16:
+		ptaps = '[16,15,13,4]'
+	elif N_stages == 17:
+		ptaps = '[17,14] [17,3]'
+	elif N_stages == 18:
+		ptaps = '[18,11] [18,7]'
+	elif N_stages == 19:
+		ptaps = '[19,6,2,1]'
+	elif N_stages == 20:
+		ptaps = '[20,17] [20,3]'
+	elif N_stages == 21:
+		ptaps = '[21,19] [21,2]'
+	elif N_stages == 22:
+		ptaps = '[22,21] [22,1]'
+	elif N_stages == 23:
+		ptaps = '[23,18] [23,5]'
+	elif N_stages == 24:
+		ptaps = '[24,23,22,17]'
+	elif N_stages == 25:
+		ptaps = '[25,22] [25,3]'
+	else:
+		ptaps = ''
+	return L_codelen, ptaps
+
 ###########################################################################################
 
 # Start Program
@@ -662,53 +714,102 @@ if prog_section == '1':
 		print('Generating IQ file for PN Codes without Preamble')
 		print('PN Program deprived from Dr. Neal Patwari Reference Function for LFSR in MATLAB, Washington University in St. Louis')
 		print('Program derived from Over-the-air Narrowband QPSK Modulation and Demodulation Tutorial, MWW 2023')
+		
+		N_stages = input('\nChoose number of stages N, from 3 to 25, for PN codes. Code length L = 2^N - 1: ')
+		if N_stages.isnumeric():
+			N_stages = int(N_stages)
+		else:
+			print('N must be numeric. Continuing with default N = 9.')
+			N_stages = 9
+		
+		if N_stages < 3 or N_stages > 25:
+			print('Invalid value for N. Choosing default N = 9, L = 511')
+			N_stages = 9
+
+		# Taps & Default Taps
+		L_codelen, ptaps = choose_taps(N_stages)
+		print('Code length L = ' + str(L_codelen))
+		print('Valid taps to choose: ' + ptaps)
+		ptaps_l = ptaps.split(' ')
+		default_taps = ptaps_l[0]
+		if len(ptaps_l) > 1:
+			default_taps_q = ptaps_l[1]
+		else:
+			default_taps_q = ptaps_l[0]
+
+		d_taps = []
+		d_taps_q = []
+		num_t = False
+		temp_tap = ''
+		for each in default_taps:
+			if each.isnumeric():
+				num_t = True
+				temp_tap = temp_tap + each
+			elif not each.isnumeric() and num_t:
+				d_taps.append(int(temp_tap))
+				temp_tap = ''
+				num_t = False
+		num_t = False
+		temp_tap = ''
+		for each in default_taps_q:
+			if each.isnumeric():
+				num_t = True
+				temp_tap = temp_tap + each
+			elif not each.isnumeric() and num_t:
+				d_taps_q.append(int(temp_tap))
+				temp_tap = ''
+				num_t = False
+		#for each in default_taps:
+			#if each.isnumeric():
+				#d_taps.append(int(each))
+		#for each in default_taps_q:
+			#if each.isnumeric():
+				#d_taps_q.append(int(each))
+		d_taps_s = [str(d) for d in d_taps]
+		d_taps_qs = [str(dq) for dq in d_taps_q]
+		d_taps_s = ",".join(d_taps_s)
+		d_taps_qs = ",".join(d_taps_qs)
+
+		# Default initial state vector
+		default_init = [0 for i in range(N_stages-1)]
+		default_init.append(1)
+		default_init_s = [str(d) for d in default_init]
+		default_init_s = ",".join(default_init_s)
 
 		print('\nIn-Phase Sequence:')
-		state = input('initial state vector as string (enter for default 000000001 i.e. [0,0,0,0,0,0,0,0,1]): ')
-		taps = input('taps as string (enter for default 95 i.e. [9,5]): ')
+		state = input('Enter initial state vector (default ' + str(default_init) + ') as string (i.e. ' + default_init_s + '). Press enter to use default: ')
+		taps = input('Enter taps (default ' + str(d_taps) + ') as string (i.e. ' + d_taps_s + '). Press enter to use default: ')
 
 		if state == '':
-			state = [0,0,0,0,0,0,0,0,1]
+			state = default_init
 		else:
-			state = list(state)
-			ll = 0
-			for l in state:
-				state[ll] = int(l)
-				ll += 1
+			state = state.split(',')
+			state = [int(s) for s in state]
 		
 		if taps == '':
-			taps = [9,5]
+			taps = d_taps
 		else:
-			taps = list(taps)
-			ll = 0
-			for l in taps:
-				taps[ll] = int(l)
-				ll += 1
+			taps = taps.split(',')
+			taps = [int(t) for t in taps]
 		
 		L = LFSR(initstate=state, fpoly=taps)
 		pn_iSeq = L.getFullPeriod()
 
 		print('\nQuadrature Sequence:')
-		state = input('initial state vector as string (enter for default 000000001 i.e. [0,0,0,0,0,0,0,0,1]): ')
-		taps = input('taps as string (enter for default 9643 i.e. [9,6,4,3]): ')
+		state = input('Enter initial state vector (default ' + str(default_init) + ') as string (i.e. ' + default_init_s + '). Press enter to use default: ')
+		taps = input('Enter taps (default ' + str(d_taps_q) + ') as string (i.e. ' + d_taps_qs + '). Press enter to use default: ')
 
 		if state == '':
-			state = [0,0,0,0,0,0,0,0,1]
+			state = default_init
 		else:
-			state = list(state)
-			ll = 0
-			for l in state:
-				state[ll] = int(l)
-				ll += 1
+			state = state.split(',')
+			state = [int(s) for s in state]
 		
 		if taps == '':
-			taps = [9,6,4,3]
+			taps = d_taps_q
 		else:
-			taps = list(taps)
-			ll = 0
-			for l in taps:
-				taps[ll] = int(l)
-				ll += 1
+			taps = taps.split(',')
+			taps = [int(t) for t in taps]
 		
 		L = LFSR(initstate=state, fpoly=taps)
 		pn_qSeq = L.getFullPeriod()
