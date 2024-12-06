@@ -51,13 +51,11 @@ To run through the full experiment including data collection and WATCH:
     * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
 
 > [!IMPORTANT]
-> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mus$).
+> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu s$).
 
 > [!NOTE]
-> Offset results on the order of 10s-100s of $\mus$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mus$ when using the default sample_rate of 250kHz).
-
-> [!NOTE]
-> Offset results on the order of 1000s of $\mus$ indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
+> Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).
+> Offset results on the order of 1000s of $\mu s$ indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
 
 ## Option (2): WATCH Post-Processing with Previous Data
 To run through analysis with WATCH for previously collected data:
@@ -72,6 +70,10 @@ To run through analysis with WATCH for previously collected data:
     * The least square error and root mean squared error (RMSE) included in the final results compare each link's true found offset indicies to estimated offsets that are calculated using the WATCH algorithm results.
     * The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
     * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
-    * **Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu$s).**
-    * **NOTE:** Offset results on the order of 10s-100s of $\mu$s indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample_rate}$ (4$\mu$s when using the default sample_rate of 250kHz).
-    * **NOTE:** Offset results on the order of 1000s of $\mu$s indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
+
+> [!IMPORTANT]
+> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu s$).
+
+> [!NOTE]
+> Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).
+> Offset results on the order of 1000s of $\mu s$ indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
