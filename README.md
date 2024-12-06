@@ -14,11 +14,11 @@ To run through the full experiment including data collection and WATCH:
 2. Configuration
     * Choose [y/n] for debug. [y] will display print statements for all intermediate steps. [n] will display only important print statements and final results. 
     * Choose [y/n] for plots. [y] will display all plots. [n] will display only a few examples of each plot type.
+    * Choose [1] to run the entire program.
 
 > [!TIP]
 > Depending on the number of nodes in the experiment, displaying all plots could produce a large number of plots, which must be closed before proceeding with the program, since it will produce, at least, one plot per iteration per link.
 
-    * Choose [1] to run the entire program.
 3. Create Message to Transmit
     * To transmit plain text [p]: create a message that is 94 characters long. 
     * To transmit PN codes [r]: determine which initial states and taps to use for in-phase and quadrature. Specify these when prompted or hit enter without entering text to use the default states and taps.
@@ -51,13 +51,13 @@ To run through the full experiment including data collection and WATCH:
     * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
 
 > [!IMPORTANT]
-> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mu$).
+> Final WATCH analysis results will be printed, by iteration, to STDOUT, and displayed in microseconds ($\mus$).
 
 > [!NOTE]
-> Offset results on the order of 10s-100s of $\mu$ s indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mu$ s when using the default sample_rate of 250kHz).
+> Offset results on the order of 10s-100s of $\mus$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sample\_rate}$ (4 $\mus$ when using the default sample_rate of 250kHz).
 
 > [!NOTE]
-> Offset results on the order of 1000s of $\mu$ s indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
+> Offset results on the order of 1000s of $\mus$ indicate a non time-synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes' local clocks are significantly offset from one another.
 
 ## Option (2): WATCH Post-Processing with Previous Data
 To run through analysis with WATCH for previously collected data:
