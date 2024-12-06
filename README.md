@@ -22,7 +22,7 @@ To run through the full experiment including data collection and WATCH:
 3. Create Message to Transmit
     * To transmit plain text [p]: Choose a plain text message that is 94 characters long. 
     * To transmit PN codes [r]: Taps used in this program are derived from **Table 2: Some feedback taps for maximal sequence length** in [*Pseudo noise sequences for engineers* (R.N. Mutagi 1996)](https://www.researchgate.net/publication/230813025_Pseudo_Noise_Sequences_for_Engineers_Electronics_and_Communication_Engineering_Journal_UK_Vol8_No2_April_1996).
-      - Specify a number of stages, N, from 3 to 25, where the length of the PN code, L = 2^N - 1. The program will provide the valid options for taps based on the chosen N number of stages.
+      - Specify a number of stages, N, from 3 to 25, where the length of the PN code, $L = 2^N - 1$. The program will provide the valid options for taps based on the chosen N number of stages.
       - Choose an initial state vector for the in-phase sequence or press enter to use the shown default.
       - Choose one of the valid options for taps to use for the in-phase sequence or press enter to use the shown default.
       - Choose an initial state vector for the quadrature sequence or press enter to use the shown default.
