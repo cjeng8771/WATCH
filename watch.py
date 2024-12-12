@@ -1,5 +1,5 @@
 # WATCH: A Distributed Clock Time Offset Estimation Tool for Software-Defined Radio Platforms
-# Last Modified - 12/6/2024
+# Last Modified - 12/8/2024
 # Author - Cassie Jeng
 
 # Import packages
@@ -92,7 +92,7 @@ def Information_Transmit_p():
 
 	if DEBUG:
 		print('QPSK signal to transmit[0:5]:\n',QPSK_bits[0:5])
-	return QPSK_bits
+	return QPSK_bits, Info_to_TX
 
 def Information_Transmit_r(inphase, quad):
 	in_phase = np.asarray(inphase)
@@ -351,7 +351,7 @@ def crossCorrelationMax(rx0, packetSignal, peaks_arr, ptdg):
 	xcorr_out = signal.correlate(rx0, packetSignal, mode='same')
 	xcorr_mag = np.abs(xcorr_out)
 
-	length_of_packet = 3200 # hard coded
+	length_of_packet = 3200 # hard coded -- put length of packet variable
 	maxIndex = np.argmax(xcorr_mag[:len(xcorr_mag)-length_of_packet])
 	lagIndex = lags[maxIndex]
 
@@ -360,7 +360,7 @@ def crossCorrelationMax(rx0, packetSignal, peaks_arr, ptdg):
 	short_xcorr_mag = np.concatenate((xcorr_mag[:peak_1-300], xcorr_mag[peak_1+300:]))
 	peak_2 = np.argmax(short_xcorr_mag)
 	if peak_2 > peak_1-300:
-		peak_2 += 300
+		peak_2 += 600 #300
 	peak_2 = lags[peak_2]
 	peaks = np.array([peak_1, peak_2])
 	peaks_arr.append(abs(peak_1-peak_2))
@@ -369,12 +369,13 @@ def crossCorrelationMax(rx0, packetSignal, peaks_arr, ptdg):
 		plt.figure()
 		# plt.plot(lags, xcorr_mag, label='|X-Correlation|')
 		plt.plot(lags, xcorr_mag)
-		plt.legend()
+		# plt.legend()
 		# plt.plot(peaks, xcorr_mag[peaks], "x")
-		plt.ylabel('|X-Correlation| with TX Packet', fontsize=14)
+		# plt.ylabel('|X-Correlation| with TX Packet', fontsize=14)
+		plt.title('|X-Correlation| with TX Packet')
 		plt.xlabel('RX Packet Sample Index', fontsize=14)
-		plt.ylim((0,1))
-		plt.tight_layout()
+		# plt.ylim((0,1))
+		# plt.tight_layout()
 		plt.show()
 
 	return lagIndex
@@ -419,7 +420,7 @@ def correct_difference(col_num, delta, rx_names, off):
 		for lag in section:
 			ind = 0
 			while(ind < limit):
-				if abs(lag - section[ind]) > 2000: # hard coded
+				if abs(lag - section[ind]) > int((off/2)):
 					min_val = min(lag, section[ind])[0]
 					if min_val == lag:
 						small.append([lag_ind,min_val])
@@ -434,25 +435,71 @@ def correct_difference(col_num, delta, rx_names, off):
 			if DEBUG:
 				# print(' ----- Estimate values corrected from wrap-around ----- ')
 				print('CORRECTED: Iteration '+str(col_num)+', Section '+str(s)+', Index '+str(sm[0])+' -- '+str(sm[1]))
-			delta[(sm[0] + s*limit)] += off # 4072, 4096
+			delta[(sm[0] + s*limit)] += off # 4072 (better), 4096
 		s += 1
 	return delta
 
-def calculate_SNR(rx_data, samp_rate=250000):
+def SNR(rx_data, samp_rate):
+	# plt.figure()
 	Pxx, freqs = plt.psd(rx_data, Fs = samp_rate/1000)
-	# too many hard coded values in this function
-	center_ind = int(len(Pxx)/2)
-	lower = center_ind - 10
-	upper = center_ind + 10
+	# plt.title('PSD for Calculating Link SNR')
+	# plt.xlabel('Frequency (kHz)')
+	# plt.show()
 
-	n_lower = center_ind - 25
-	n_upper = center_ind + 25
-
-	s = np.mean(np.square(Pxx[lower:upper])) # signal + noise
-	n = np.mean(np.square(np.hstack((Pxx[:n_lower], Pxx[n_upper:])))) # noise
-	snr = max((s/n) - 1, 1, 1.0e-5)
-	snr = min(snr, 100)
-	return snr, Pxx
+	peak = max(Pxx)
+	anti_peak = min(Pxx)
+	log_peak = 10*math.log10(peak)
+	log_apeak = 10*math.log10(anti_peak)
+	if DEBUG:
+		print('peak: ' + str(log_peak))
+		print('anti peak: ' + str(log_apeak))
+	no_signal = 0
+	if abs(log_peak - log_apeak) < 10:
+		if DEBUG:
+			print('No Signal')
+		no_signal = 1
+	halfp = peak/2
+	peak_ind = 0
+	freq3db = False
+	first_cut = 0
+	second_cut = 0
+	first_ind = 0
+	second_ind = 0
+	no_signal = 0
+	# find 3dB frequencies
+	for i,j in enumerate(Pxx):
+		if j == peak:
+			peak_ind = i
+		if j >= halfp and freq3db == False:
+			first_cut = j
+			first_ind = i
+			freq3db = True
+		if j <= halfp and freq3db == True:
+			second_cut = j
+			second_ind = i
+	bandwidth = second_ind - first_ind
+	if bandwidth > int((len(Pxx)*3)/4):
+		bandwidth = int((len(Pxx)*3)/4)
+		# bandwidth too large, probably no signal found, threshold for not calculating WATCH because no RX signal
+		no_signal = 1
+	if DEBUG:
+		print('No clear signal v. noise separation')
+		print('peak index: ' + str(peak_ind))
+		print('bandwidth: ' + str(bandwidth))
+	lower = peak_ind - int(bandwidth/2)
+	upper = peak_ind + int(bandwidth/2)
+	noise_upper = int(min((peak_ind + bandwidth), (len(Pxx)-1-(bandwidth/4))))
+	noise_lower = int(max((peak_ind - bandwidth), (bandwidth/4)))
+	
+	if no_signal:
+		snr = 0.01
+	else:
+		s = np.mean(np.square(Pxx[lower:upper])) # signal + noise
+		n = np.mean(np.square(np.hstack((Pxx[:noise_lower], Pxx[noise_upper:])))) # noise
+		snr = 10 * math.log10(s/n)
+	if DEBUG:
+		print('SNR: ' + str(snr))
+	return snr, Pxx, no_signal
 
 def make_snr_vecs(col_num, links):
 	file_name = "snr_" + str(col_num) + ".txt"
@@ -494,7 +541,7 @@ def least_sq_error(col_num, estimate, delta, A, links, ptdg, samp_rate):
 		#plotting error for each link
 		print(' ----- Plotting Error by Link for Iteration ' + str(col_num) + ' ----- ')
 		print('x-axis is links in the experiment, in order based on the node order specified earlier in program.')
-		plt.plot(i,error)
+		plt.scatter(i,error)
 		plt.grid()
 		plt.xlabel('Link')
 		plt.ylabel('Estimation Error (us)')
@@ -505,16 +552,8 @@ def least_sq_error(col_num, estimate, delta, A, links, ptdg, samp_rate):
 		print(' ----- Histogram of Link Error for Iteration ' + str(col_num) + ' ----- ')
 		plt.hist(error)
 		plt.grid()
-		plt.xlabel('Histogram of Estimation Error by Link for Iteration ' + str(col_num))
+		plt.title('Histogram of Estimation Error by Link for Iteration ' + str(col_num))
 		plt.show()
-
-		# plotting histogram of MSE for each link
-		# print(' ----- Histogram Link Squared Error for Iteration ' + str(col_num) + ' ----- ')
-		# plt.hist(np.square(error * (1/250000)))
-		# plt.grid()
-		# plt.xlabel('Squared Error (T^2)')
-		# plt.title('Histogram of Squared Estimation Error for Iteration ' + str(col_num))
-		# plt.show()
 
 	# finding root mean squared error for repNum (col_num)
 	RMSE = math.sqrt(np.square(error).mean())
@@ -528,6 +567,8 @@ def samples_to_us(value, samp_rate):
 	return (float)((value/samp_rate)*1000000)
 
 def print_results_us(col_num, rx_names, e_est, samp_rate, lgr_ms, smr_ms):
+	output_txt = []
+	output_txt.append(" -------- Iteration " + str(col_num) + " -------- ")
 	print(" -------- Iteration " + str(col_num) + " -------- ")
 
 	max_len = -1
@@ -543,6 +584,7 @@ def print_results_us(col_num, rx_names, e_est, samp_rate, lgr_ms, smr_ms):
 		for i in range(max_len-len(title)):
 			title += " "
 
+	output_txt.append("(~, " + title + ") ----- offset from " + rx_names[0] + " in us")
 	print(Fore.RED + "(~, " + title + ") ----- offset from " + rx_names[0] + " in us" + Style.RESET_ALL)
 	r = 0
 
@@ -553,8 +595,10 @@ def print_results_us(col_num, rx_names, e_est, samp_rate, lgr_ms, smr_ms):
 				rx_temp += " "
 		delay = samples_to_us(e_est[r][0],samp_rate)
 		if delay < 0:
+			output_txt.append("(~, " + rx_temp + ") ----- [" + format(delay,'.3f') + "]")
 			print("(~, " + rx_temp + ") ----- [" + format(delay,'.3f') + "]")
 		else:
+			output_txt.append("(~, " + rx_temp + ") ----- [" + format(delay,'.4f') + "]")
 			print("(~, " + rx_temp + ") ----- [" + format(delay,'.4f') + "]")
 
 		if abs(delay) >= 1000: #1 millisecond
@@ -563,7 +607,8 @@ def print_results_us(col_num, rx_names, e_est, samp_rate, lgr_ms, smr_ms):
 			smr_ms.append(delay)
 		r += 1
 	
-	return lgr_ms, smr_ms
+	smr_ms.remove(0) # remove reference node value
+	return lgr_ms, smr_ms, output_txt
 
 def round_string(RMSE):
 	round_i = 6
@@ -629,6 +674,7 @@ def choose_taps(N_stages):
 # Start Program
 print('\nWATCH: A Distributed Clock Time Offset Estimation Tool on POWDER')
 print('Initializing program....\n')
+output_results = []
 
 # Which section(s) of program to run
 prog_section = input('Enter (1) to run entire program (IQ generation, pre-processing, experiment, WATCH post-processing)\nEnter (2) to run just WATCH post-processing\n(1/2): ')
@@ -647,9 +693,10 @@ if prog_section == '1':
 	print('\n##################################################################\n')
 	print('STEP 1: IQ Generation: Create IQ File for Message to Transmit\n')
 	if data_d == 'p':
-		print('Generating IQ file for Plain Text Data with Preamble')
+		print('Generating IQ file for Plain Text Data')
 		print('Program derived from Over-the-air Narrowband QPSK Modulation and Demodulation Tutorial, MWW 2023')
-		Frame = Information_Transmit_p()
+		Frame, message_to_tx = Information_Transmit_p()
+		output_results.append('IQ File created with Plain Text message: ' + message_to_tx + '\n')
 		data1 = []
 		for i in range(len(Frame)):
 			data1.append(2*Frame[i][0]+Frame[i][1])
@@ -730,6 +777,7 @@ if prog_section == '1':
 		L_codelen, ptaps = choose_taps(N_stages)
 		print('Code length L = ' + str(L_codelen))
 		print('Valid taps to choose: ' + ptaps)
+		output_results.append('IQ File created with PN Codes. N_stages = ' + str(N_stages) + ' and L = ' + str(L_codelen) + '\n')
 		ptaps_l = ptaps.split(' ')
 		default_taps = ptaps_l[0]
 		if len(ptaps_l) > 1:
@@ -951,7 +999,7 @@ if prog_section == '1':
 		exit()
 
 	print('\n\n##################################################################\n')
-	print('STEP 4: Set up Nodes for Experiment: IQ file, meascli.py, 3.run_cmd.sh, save_iq_w_tx_file.json')
+	print('STEP 4: Set up Nodes for Experiment: IQ file, meascli.py, 2.start_client.sh, 3.run_cmd.sh, save_iq_w_tx_file.json')
 
 	## Transferring IQ file to all nodes
 	file_trans(ft_filename,nodes,fn,ft_directory)
@@ -979,6 +1027,39 @@ if prog_section == '1':
 		## Transferring meascli.py back to nodes
 		ms_directory = '/local/repository/shout'
 		file_trans('meascli_transfer.sh',nodes,ms_filename,ms_directory)
+	elif clock_line == 'Not found':
+		linenum, clock_line = find_line(ms_filename,'useexternalclock = True')
+		if clock_line == 'Not found':
+			# node doesn't support using external clock/White Rabbit
+			print('Use of external clock not supported. This will lead to unsynchronized results using WATCH. Exiting program.')
+			exit()
+	
+	## Adding -t and -c to meascli.py call to use tx/rx port in 2.start_client.sh
+	command = 'scp ' + nodes[0] + ':/local/repository/bin/2.start_client.sh .'
+	command_arr = command.split(' ')
+	cli_result = subprocess.run(command_arr, capture_output=True, text=True)
+
+	cli_filename = '2.start_client.sh'
+	linenum, cli_line = find_line(cli_filename,'meascli.py -s')
+	if linenum != 0 and cli_line != 'Not found':
+		with open(cli_filename,'r') as f:
+			cli_lines = f.readlines()
+		cli_line = cli_lines[linenum-1]
+		cli_sections = cli_line.split('meascli.py',1)
+		new_line = cli_sections[0] + 'meascli.py -t -c' + cli_sections[1]
+		if DEBUG:
+			print('Old line: ' + cli_line)
+			print('New line: ' + new_line)
+		cli_lines[linenum-1] = new_line
+		with open(cli_filename,'w') as f:
+			f.writelines(cli_lines)
+		cli_directory = '/local/repository/bin'
+		file_trans('cli_transfer.sh',nodes,cli_filename,cli_directory)
+	elif cli_line == 'Not found':
+		linenum, cli_line = find_line(cli_filename,'meascli.py -t -c -s')
+		if cli_line == 'Not found':
+			print('Script might not include a call to meascli.py. Check which file the clients will be running.')
+			exit()
 
 	## Checking 3.run_cmd.sh file on nodes
 	command = 'scp ' + nodes[0] + ':/local/repository/bin/3.run_cmd.sh .'
@@ -1147,6 +1228,10 @@ if prog_section == '1':
 	pre = [filename for filename in os.listdir('.') if filename.startswith(shout_folder_options[:-1])]
 	if len(pre) > 0:
 		folder = pre[0]
+		file_name = folder + '/iqinfo.txt'
+		with open(file_name,'w') as f:
+			for line in output_results:
+				f.write(line + '\n')
 		if DEBUG:
 			print('Data collection folder found: ' + folder)
 	else:
@@ -1227,6 +1312,7 @@ Lp = 6
 
 lag_data = []
 snr_data = []
+sig_bin = []
 peaks_arr = []
 
 plt_cnt = 0
@@ -1266,17 +1352,25 @@ for tx in txlocs: #rx_names:
 						lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr, False)
 				else:
 					lagIndex = crossCorrelationMax(filtered_rx0, packetSignal, peaks_arr, False)
-				snr, pxx = calculate_SNR(rx0)
+				snr, pxx, no_signal = SNR(rx0,samp_rate)
 
 				lags_row.append(lagIndex)
 				snr_row.append(snr)
+				sig_bin.append(no_signal)
 				plt_cnt += 1
 			lag_data.append(lags_row)
 			snr_data.append(snr_row)
 
 lag_data = np.array(lag_data)
 snr_data = np.array(snr_data)
-off = 4072 # hard coded -- fix
+off = int(len(rx0)/2)
+no_weighted = 0
+if sum(sig_bin) > int(len(sig_bin)/4):
+	no_weighted = 1
+	print(Fore.RED + '\nThere are too many links with missing rx signals.' + Style.RESET_ALL + ' The WATCH program will not have sufficient data to analyze the time synchronization of nodes accurately. The displayed results will not be representative of the actual network synchronization.\n')
+if DEBUG:
+	print('length rx0: ' + str(len(rx0)))
+	print('offset: ' + str(off))
 
 for r in range(rxrepeat):
 	file_name = 'col_' + str(r+1) + '.txt'
@@ -1322,10 +1416,16 @@ pinvA = np.linalg.pinv(A)
 
 # Make Delta Vectors, Make SNR Vectors, Correct Estimate Errors, Create Estimate Vectors, Printing Results, Least Square Error, Plotting SNR Error, Printing Error Results
 RMSEs = []
-weighted = int(input("Invoke the weighted least squares error method? [0/1]: "))
+if not no_weighted:
+	print_r = 1
+	weighted = int(input("Invoke the weighted least squares error method? [0/1]: "))
+else:
+	weighted = 0
+	print_r = int(input('Display results despite missing rx signals? [0/1]: '))
 plt_cnt = 0
 lgr_ms = []
 smr_ms = []
+#output_results = []
 for r in range(1,rxrepeat+1):
 	# print('\nIteration ' + str(r) + ' for all links:')
 	# print('\nIteration ' + str(r) + ':')
@@ -1339,7 +1439,10 @@ for r in range(1,rxrepeat+1):
 
 	e_est_1, T_est_1, estimate_1 = find_e_vector(delta_1,A,pinvA,rx_names,snr_1,weighted)
 
-	lgr_ms, smr_ms = print_results_us(r, rx_names, e_est_1, samp_rate, lgr_ms, smr_ms)
+	if print_r:
+		lgr_ms, smr_ms, output_txt = print_results_us(r, rx_names, e_est_1, samp_rate, lgr_ms, smr_ms)
+		for line in output_txt:
+			output_results.append(line)
 
 	if DEBUG and PLOTS:
 		RMSE_1,error_1 = least_sq_error(r,estimate_1,delta_1,A,links,True,samp_rate)
@@ -1356,21 +1459,12 @@ for r in range(1,rxrepeat+1):
 	RMSEs.append(RMSE_1)
 	plt_cnt += 1
 
-if len(lgr_ms) >= 2*len(smr_ms):
-	print(Fore.RED + '\nNot Synchronized.\n' + Style.RESET_ALL + 'Across all iterations, this experiment has majority results on the order of milliseconds.\nOffset results on the order of 1000s of microseconds indicate a non synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes\' local clocks are significantly offset from one another.\n')
-elif len(smr_ms) >= 2*len(lgr_ms):
-	print(Fore.RED + '\nSynchronized.\n' + Style.RESET_ALL + 'Across all iterations, this experiment has majority results on the order of microseconds.\nOffset results on the order of 10s-100s of microseconds indicate a synchronized network. However, results should not be expected to be much less than ' + str(samples_to_us(1,samp_rate)) + 'us (1/samp_rate).\n')
-else:
-	print(Fore.RED + '\nInconclusive.\n' + Style.RESET_ALL + 'There is no clear majority within the results as to whether the nodes are synchronized or not. The results are showing both synchronized offsets on the order of microseconds and non-synchronized offsets on the order of milliseconds.\nIt is recommeded to power-cycle the nodes and run the experiment again.\n')
-
-# RMSE_ratio = min(RMSEs)/max(RMSEs)
 if DEBUG:
 	print(Fore.RED + '\nRoot Mean Squared Error (RMSE) across all links for each Iteration' + Style.RESET_ALL)
 	for rme in range(1,len(RMSEs)+1):
 		print('Iteration ' + str(rme) + ': ' + format(samples_to_us(RMSEs[rme-1],samp_rate),'.4f') + ' us')
-# print('\nRMSE ratio between iterations:', RMSE_ratio)
+	# print('\nRMSE ratio between iterations:', RMSE_ratio)
 
-if DEBUG:
 	for i in range(len(RMSEs)):
 		RMSEs[i] = samples_to_us(RMSEs[i],samp_rate)
 	
@@ -1388,6 +1482,25 @@ if DEBUG:
 	plt.ylabel('RMSE (us)')
 	plt.title('Bar Chart of RMSE in us by Iteration')
 	plt.show()
+
+#if len(lgr_ms) == 0 and len(smr_ms) == 0:
+if no_weighted:
+	output_results.append('\nMissing rx signals. Inconclusive.\nToo many of the links were missing rx signals, preventing WATCH from obtaining sufficient data to analyze the time synchronization of the network nodes. The experiment should be run again to collect more data.\n')
+	print(Fore.RED + '\nMissing rx signals. Inconclusive.\n' + Style.RESET_ALL + 'Too many of the links were missing rx signals, preventing WATCH from obtaining sufficient data to analyze the time synchronization of the network nodes. The experiment should be run again to collect more data.\n')
+elif len(lgr_ms) >= 2*len(smr_ms):
+	output_results.append('\nNot Synchronized.\nAcross all iterations, this experiment has majority results on the order of milliseconds.\nOffset results on the order of 1000s of microseconds indicate a non synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes\' local clocks are significantly offset from one another.\n')
+	print(Fore.RED + '\nNot Synchronized.\n' + Style.RESET_ALL + 'Across all iterations, this experiment has majority results on the order of milliseconds.\nOffset results on the order of 1000s of microseconds indicate a non synchronized network. Delays this large, on the order of milliseconds, show the experiment nodes\' local clocks are significantly offset from one another.\n')
+elif len(smr_ms) >= 2*len(lgr_ms):
+	output_results.append('\nSynchronized.\nAcross all iterations, this experiment has majority results on the order of microseconds.\nOffset results on the order of 10s-100s of microseconds indicate a synchronized network. However, results should not be expected to be much less than ' + str(samples_to_us(1,samp_rate)) + 'us (1/samp_rate).\n')
+	print(Fore.RED + '\nSynchronized.\n' + Style.RESET_ALL + 'Across all iterations, this experiment has majority results on the order of microseconds.\nOffset results on the order of 10s-100s of microseconds indicate a synchronized network. However, results should not be expected to be much less than ' + str(samples_to_us(1,samp_rate)) + 'us (1/samp_rate).\n')
+else:
+	output_results.append('\nInconclusive.\nThere is no clear majority within the results as to whether the nodes are synchronized or not. The results are showing both synchronized offsets on the order of microseconds and non-synchronized offsets on the order of milliseconds.\nIt is recommeded to power-cycle the nodes and run the experiment again.\n')
+	print(Fore.RED + '\nInconclusive.\n' + Style.RESET_ALL + 'There is no clear majority within the results as to whether the nodes are synchronized or not. The results are showing both synchronized offsets on the order of microseconds and non-synchronized offsets on the order of milliseconds.\nIt is recommeded to power-cycle the nodes and run the experiment again.\n')
+
+file_name = 'results.txt'
+with open(file_name,'w') as f:
+	for line in output_results:
+		f.write(line + '\n')
 
 ## Program END ##
 print('\n---------- WATCH PROGRAM END ----------\n\n\n\n\n')
