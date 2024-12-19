@@ -351,16 +351,19 @@ def crossCorrelationMax(rx0, packetSignal, peaks_arr, ptdg):
 	xcorr_out = signal.correlate(rx0, packetSignal, mode='same')
 	xcorr_mag = np.abs(xcorr_out)
 
-	length_of_packet = 3200 # hard coded -- put length of packet variable
+	# length_of_packet = 3200 # hard coded -- replace with length of packet
+	length_of_packet = len(packetSignal)
 	maxIndex = np.argmax(xcorr_mag[:len(xcorr_mag)-length_of_packet])
 	lagIndex = lags[maxIndex]
 
-	# Calculate length of packet
-	peak_1 = lags[np.argmax(xcorr_mag)]
-	short_xcorr_mag = np.concatenate((xcorr_mag[:peak_1-300], xcorr_mag[peak_1+300:]))
+	# Calculate difference between two peaks
+	peak_width = 300
+	peak_1 = np.argmax(xcorr_mag)
+	short_xcorr_mag = np.concatenate((xcorr_mag[:peak_1-peak_width], xcorr_mag[peak_1+peak_width:]))
 	peak_2 = np.argmax(short_xcorr_mag)
-	if peak_2 > peak_1-300:
-		peak_2 += 600 #300
+	if peak_2 > peak_1-peak_width:
+		peak_2 += (2*peak_width)
+	peak_1 = lags[peak_1]
 	peak_2 = lags[peak_2]
 	peaks = np.array([peak_1, peak_2])
 	peaks_arr.append(abs(peak_1-peak_2))
@@ -552,6 +555,8 @@ def least_sq_error(col_num, estimate, delta, A, links, ptdg, samp_rate):
 		print(' ----- Histogram of Link Error for Iteration ' + str(col_num) + ' ----- ')
 		plt.hist(error)
 		plt.grid()
+		plt.xlabel('Estimation Error (us)')
+		plt.ylabel('Number of Links')
 		plt.title('Histogram of Estimation Error by Link for Iteration ' + str(col_num))
 		plt.show()
 
@@ -1011,28 +1016,44 @@ if prog_section == '1':
 
 	## Editing external clock line
 	ms_filename = 'meascli.py'
+	with open(ms_filename,'r') as f:
+		ms_lines = f.readlines()
 	linenum, clock_line = find_line(ms_filename,'useexternalclock = False')
+	linenum2, txrx_line = find_line(ms_filename,'usetxrx = False')
 	if linenum != 0 and clock_line != 'Not found':
 		new_line = clock_line.replace('False','True')
 		if DEBUG:
 			print('Line Number: ' + str(linenum))
 			print('Line: ' + clock_line)
 			print('Line: ' + new_line)
-		with open(ms_filename,'r') as f:
-			ms_lines = f.readlines()
 		ms_lines[linenum-1] = new_line
-		with open(ms_filename,'w') as f:
-			f.writelines(ms_lines)
-
-		## Transferring meascli.py back to nodes
-		ms_directory = '/local/repository/shout'
-		file_trans('meascli_transfer.sh',nodes,ms_filename,ms_directory)
 	elif clock_line == 'Not found':
 		linenum, clock_line = find_line(ms_filename,'useexternalclock = True')
 		if clock_line == 'Not found':
 			# node doesn't support using external clock/White Rabbit
 			print('Use of external clock not supported. This will lead to unsynchronized results using WATCH. Exiting program.')
 			exit()
+
+	if linenum2 != 0 and txrx_line != 'Not found':
+		new_line2 = txrx_line.replace('False','True')
+		if DEBUG:
+			print('Line number: ' + str(linenum2))
+			print('Line: ' + txrx_line)
+			print('Line: ' + new_line2)
+		ms_lines[linenum2-1] = new_line2
+	elif txrx_line == 'Not found':
+		linenum2, txrx_line = find_line(ms_filename,'usetxrx = True')
+		if txrx_line == 'Not found':
+			# node doesn't support using tx/rx port
+			print('Use of TX/RX port not supported. This will lead to insufficient recieved signals to use WATCH. Exiting program.')
+			exit()
+
+	with open(ms_filename,'w') as f:
+		f.writelines(ms_lines)
+
+	## Transferring meascli.py back to nodes
+	ms_directory = '/local/repository/shout'
+	file_trans('meascli_transfer.sh',nodes,ms_filename,ms_directory)
 	
 	## Adding -t and -c to meascli.py call to use tx/rx port in 2.start_client.sh
 	command = 'scp ' + nodes[0] + ':/local/repository/bin/2.start_client.sh .'
@@ -1223,8 +1244,6 @@ if prog_section == '1':
 	command_arr = command.split(' ')
 	folder_result = subprocess.run(command_arr, capture_output=True, text=True)
 	
-	print('If no folders/files were transferred from remote host, run ' + Fore.RED + 'ls /local/data/' + Style.RESET_ALL + ' on orch node and check if there is a folder entitled \'Shout_meas_MM-DD-YYYY_HH-MM-SS\' where MM-DD-YYYY is the date of collection and HH-MM-SS is the time of collection. If this folder does exist, manually run the following command, updating the necessary fields, to scp the data to your local host. The folder should have three files: log, measurements.hdf5, and save_iq_w_tx_file.json: \n' + Fore.RED + 'scp -r <username>@<orch_node_hostname>:/local/data/Shout_meas_MM-DD-YYYY_HH-MM-SS .' + Style.RESET_ALL)
-	
 	pre = [filename for filename in os.listdir('.') if filename.startswith(shout_folder_options[:-1])]
 	if len(pre) > 0:
 		folder = pre[0]
@@ -1235,7 +1254,8 @@ if prog_section == '1':
 		if DEBUG:
 			print('Data collection folder found: ' + folder)
 	else:
-		folder = input('No data collection folder with that name found in local directory. To continue with WATCH post processing, input name of folder where Shout results were saved. Format should match Shout_meas_MM-DD-YYYY_HH-MM-SS: ')
+		print('No data collection folder found in local directory. Confirm that data was transferred from remote host. If it was not, run ' + Fore.RED + 'ls /local/data/' + Style.RESET_ALL + ' on orch node and check if there is a folder entitled \'Shout_meas_MM-DD-YYYY_HH-MM-SS\' where MM-DD-YYYY is the date of collection and HH-MM-SS is the time of collection. If needed, manually run the following command, updating the necessary fields, to scp the data to your local host. The folder should have three files: log, measurements.hdf5, and save_iq_w_tx_file.json: \n' + Fore.RED + 'scp -r <username>@<orch_node_hostname>:/local/data/Shout_meas_MM-DD-YYYY_HH-MM-SS .' + Style.RESET_ALL)
+		folder = input('\nTo continue with WATCH post processing, input the folder name of Shout results to be analyzed. Format should match Shout_meas_MM-DD-YYYY_HH-MM-SS: ')
 
 	###########################################################################################
 
@@ -1363,7 +1383,8 @@ for tx in txlocs: #rx_names:
 
 lag_data = np.array(lag_data)
 snr_data = np.array(snr_data)
-off = int(len(rx0)/2)
+packetSignal = get_samps_from_file(IQ_filename)
+off = len(packetSignal) # int(len(rx0)/2)
 no_weighted = 0
 if sum(sig_bin) > int(len(sig_bin)/4):
 	no_weighted = 1

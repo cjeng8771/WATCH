@@ -28,6 +28,10 @@ To run through the full experiment including data collection and WATCH:
       - Choose an initial state vector for the quadrature sequence or press enter to use the shown default.
       - Choose one of the valid options for taps to use for the quadrature sequence or press enter to use the shown default.
     * Choose a file name for the created IQ file and enter it when prompted.
+
+> [!NOTE]
+> Information detailing what plain text message/PN code length was transmitted will be recorded in `iqinfo.txt` within the data collection folder from Shout.
+
 4. Follow all instructions printed to STDOUT for Resource Reservation with the [Platform for Open Wireless Data-driven Experimental Research (POWDER)](https://powderwireless.net/) and Initializing Node Sessions.
 
 > [!TIP]
@@ -35,12 +39,12 @@ To run through the full experiment including data collection and WATCH:
 
 5. Once all nodes are ready again, copy each listed `[username]@[node-name]` from the **SSH command** column in the table, and enter them, separated by a space, when prompted.
 6. Configuring Nodes for Transmission
-    * Follow all instructions printed to STDOUT that describe how to set up the node SSH sessions for the experiment. After continuing, the script will secure copy the IQ file previously created to the `/local/repository/shout/signal_library` directory in all nodes and check that the `meascli.py` script in the `/local/repository/shout` directory on each node is enabling the use of the external clock. 
+    * Follow all instructions printed to STDOUT that describe how to set up the node SSH sessions for the experiment. After continuing, the script will secure copy the IQ file previously created to the `/local/repository/shout/signal_library` directory in all nodes and check that the `meascli.py` script in the `/local/repository/shout` directory on each node is enabling the use of the external clock and appropriate port. 
     * When prompted about modifications to the experiment JSON file, hit enter to keep the default parameter or type the desired modification in the same format as the default is shown. 
     * From the **ID** column of the experiment table, record the full ID for every node with a valid ssh command, other than the orchestrator. When prompted, enter these in the script as directed. The script will use these IDs to secure copy the modified JSON file to the `/local/repository/etc/cmdfiles` directory on all nodes for the experiment.
 
 > [!IMPORTANT]
-> Make sure to choose a `txfreq`/`rxfreq` in the experiment's reserved range. Choose `rxrepeat` based on how many transmission iterations are desired for each link.
+> Make sure to choose a `txfreq`/`rxfreq` in the experiment's reserved range. This range is recommended to be between 3360 MHz and 3450 MHz to avoid interference. Choose `rxrepeat` based on how many transmission iterations are desired for each link.
 
 7. Running the Experiment
     * Follow all instructions printed to STDOUT. These will walk through testing preparation for the experiment and starting data collection with Shout. The Shout measurement framework is used to automate TX and RX functions across multiple nodes in the POWDER network. 
@@ -50,12 +54,13 @@ To run through the full experiment including data collection and WATCH:
 
 8. Offset Estimation Post-Processing with WATCH
     * WATCH reports an estimate local clock offset at each node, in comparison to one another, with the first node as a reference for time zero, by cross correlating the received packet from the Shout data with the transmitted packet. The offsets are the difference in microseconds between the local clock time zero and when the receiver actually receives the first sample of the transmitted packet.
-    * The least square error and root mean squared error (RMSE) included in the final results compare the offset found at each link through cross correlation, in number of samples, to the estimated offsets that are back-calculated using the WATCH algorithm results.
-    * The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
+    * The least square error and root mean squared error (RMSE) included in the final results compare the offset found at each link through cross correlation to the estimated offsets that are back-calculated using the WATCH algorithm results.
+    * The weighted least squares method can be invoked to influence the offsets based on the estimated reliability of each link using its SNR.
     * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
+    * WATCH will prematurely alert if it detects too many links with insufficient data to calculate the node clock offsets, leading to inconclusive results. This signifies that a majority of the links in the experiment did not receive detectable signals, which can be caused by situations such as out of range nodes or use of an inactive port.
 
 > [!IMPORTANT]
-> Final WATCH analysis results will be printed, by iteration, and displayed in microseconds ($\mu s$).
+> Final WATCH analysis results will be printed, by iteration, and displayed in microseconds ($\mu s$). They are also recorded in `results.txt` in the current working directory.
 
 > [!NOTE]
 > Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sampleRate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).\
@@ -77,12 +82,13 @@ To run through analysis with WATCH for previously collected data:
 4. Enter the name of the Shout data folder and IQ transmitted file when prompted.
 5. Offset Estimation Post-Processing with WATCH
     * WATCH reports an estimate local clock offset at each node, in comparison to one another, with the first node as a reference for time zero, by cross correlating the received packet from the Shout data with the transmitted packet. The offsets are the difference in microseconds between the local clock time zero and when the receiver actually receives the first sample of the transmitted packet.
-    * The least square error and root mean squared error (RMSE) included in the final results compare the offset found at each link through cross correlation, in number of samples, to the estimated offsets that are back-calculated using the WATCH algorithm results.
-    * The weighted least squares method can be invoked, but the use of each link's signal to noise ratio (SNR) is not optimized. The results will not differ much from those without the weighted least squares method.
+    * The least square error and root mean squared error (RMSE) included in the final results compare the offset found at each link through cross correlation to the estimated offsets that are back-calculated using the WATCH algorithm results.
+    * The weighted least squares method can be invoked to influence the offsets based on the estimated reliability of each link using its SNR.
     * The PSD plots can be informational to observe, but depending on the number of nodes and iterations in the experiment, there can be a large number of output plots to handle before continuing with the analysis. If DEBUG was enabled at the beginning, these will print despite what is chosen at this step.
+    * WATCH will prematurely alert if it detects too many links with insufficient data to calculate the node clock offsets, leading to inconclusive results. This signifies that a majority of the links in the experiment did not receive detectable signals, which can be caused by situations such as out of range nodes or use of an inactive port.
 
 > [!IMPORTANT]
-> Final WATCH analysis results will be printed, by iteration, and displayed in microseconds ($\mu s$).
+> Final WATCH analysis results will be printed, by iteration, and displayed in microseconds ($\mu s$). They are also recorded in `results.txt` in the current working directory.
 
 > [!NOTE]
 > Offset results on the order of 10s-100s of $\mu s$ indicate a time-synchronized network. However, results should not be expected to be much less than $\frac{1}{sampleRate}$ (4 $\mu s$ when using the default sample_rate of 250kHz).\
